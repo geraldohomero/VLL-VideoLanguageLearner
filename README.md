@@ -59,3 +59,9 @@ Contribuições são muito bem-vindas! Se você encontrar algum problema ou tive
 3. Faça o Commit de suas mudanças (`git commit -m 'Adiciona Nova Feature'`)
 4. Faça o Push para a Branch (`git push origin feature/NovaFeature`)
 5. Abra um Pull Request
+
+### To-do
+
+- [ ] Possibilidade de exportar e importar entre navegadores (Chrome, Edge, Brave...) 
+- [ ] Adicionar suporte a mais idiomas além do Chinês (Mandarim) (Inglês, Espanhol, Francês, Japonês, Coreano, etc...)
+- [ ]  Escolha de Idioma da Extensão (Possibilitar ao usuário escolher qual sua língua nativa e qual ele quer aprender)
