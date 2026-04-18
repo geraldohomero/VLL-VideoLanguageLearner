@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VLL — Side Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="vll-header" id="vll-header">
+    <div class="vll-logo">
+      <span class="vll-logo-icon">✦</span>
+      <span class="vll-logo-text">VLL</span>
+    </div>
+    <div class="vll-video-title" id="vll-video-title">Aguardando vídeo...</div>
+  </header>
+
+  <!-- Tab Bar -->
+  <nav class="vll-tabs" id="vll-tabs">
+    <button class="vll-tab active" data-tab="transcript" id="tab-transcript">
+      <span class="vll-tab-icon">📝</span> Legendas
+    </button>
+    <button class="vll-tab" data-tab="vocabulary" id="tab-vocabulary">
+      <span class="vll-tab-icon">📚</span> Vocabulário
+      <span class="vll-tab-badge" id="vocab-count">0</span>
+    </button>
+  </nav>
+
+  <!-- Transcript Panel -->
+  <section class="vll-panel active" id="panel-transcript">
+    <div class="vll-empty-state" id="transcript-empty">
+      <div class="vll-empty-icon">🎬</div>
+      <p>Abra um vídeo no YouTube com legendas em chinês para começar</p>
+    </div>
+    <div class="vll-transcript-list" id="transcript-list"></div>
+  </section>
+
+  <!-- Vocabulary Panel -->
+  <section class="vll-panel" id="panel-vocabulary">
+    <!-- Filters -->
+    <div class="vll-vocab-filters" id="vocab-filters">
+      <button class="vll-filter active" data-filter="all">Todos</button>
+      <button class="vll-filter" data-filter="red">🔴 Não sei</button>
+      <button class="vll-filter" data-filter="orange">🟠 Incerta</button>
+      <button class="vll-filter" data-filter="green">🟢 Sei</button>
+    </div>
+
+    <!-- Search -->
+    <div class="vll-search-box">
+      <input type="text" class="vll-search-input" id="vocab-search" placeholder="Buscar palavra...">
+    </div>
+
+    <!-- Word List -->
+    <div class="vll-vocab-list" id="vocab-list"></div>
+
+    <!-- Empty state -->
+    <div class="vll-empty-state" id="vocab-empty">
+      <div class="vll-empty-icon">📖</div>
+      <p>Nenhuma palavra salva ainda. Passe o mouse sobre as legendas para começar!</p>
+    </div>
+  </section>
+
+  <!-- Word Detail Modal -->
+  <div class="vll-word-detail" id="word-detail" style="display:none">
+    <button class="vll-detail-close" id="detail-close">✕</button>
+    <div class="vll-detail-hanzi" id="detail-hanzi"></div>
+    <div class="vll-detail-pinyin" id="detail-pinyin"></div>
+    <div class="vll-detail-meaning" id="detail-meaning"></div>
+    <div class="vll-detail-context" id="detail-context"></div>
+    <div class="vll-color-buttons" id="detail-colors"></div>
+    <button class="vll-remove-btn" id="detail-remove">✕ Remover do vocabulário</button>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>

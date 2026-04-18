@@ -1,0 +1,422 @@
+/*
+ * VLL Content Styles — Subtitle overlay & tooltip design system
+ * Injected into YouTube pages via content script.
+ *
+ * Design: Dark glassmorphism, vibrant accents, premium feel.
+ * Fonts: Noto Sans SC (CJK), Inter (Latin) via Google Fonts.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+/* ── CSS Custom Properties ───────────────────────────────── */
+
+:root {
+  --vll-font-cjk: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --vll-font-latin: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --vll-bg: rgba(10, 10, 25, 0.4);
+  --vll-bg-solid: #0a0a19;
+  --vll-glass: rgba(255, 255, 255, 0.05);
+  --vll-glass-border: rgba(255, 255, 255, 0.08);
+  --vll-text: #e8e8f0;
+  --vll-text-dim: #8888aa;
+  --vll-text-pinyin: #b0b0cc;
+  --vll-accent: #7c6cf0;
+  --vll-accent-glow: rgba(124, 108, 240, 0.3);
+
+  --vll-red: #ff4466;
+  --vll-orange: #ffaa33;
+  --vll-green: #44dd88;
+  --vll-white: #e8e8f0;
+
+  --vll-red-bg: rgba(255, 68, 102, 0.15);
+  --vll-orange-bg: rgba(255, 170, 51, 0.15);
+  --vll-green-bg: rgba(68, 221, 136, 0.15);
+
+  --vll-radius: 12px;
+  --vll-radius-sm: 8px;
+  --vll-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --vll-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Subtitle Overlay Container ──────────────────────────── */
+
+.vll-overlay {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 900px;
+  z-index: 9999;
+  pointer-events: auto;
+  font-family: var(--vll-font-latin);
+  transition: opacity var(--vll-transition);
+}
+
+.vll-overlay.vll-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Subtitle Box ────────────────────────────────────────── */
+
+.vll-subtitle-box {
+  width: fit-content;
+  margin: 0 auto;
+  background: var(--vll-bg);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--vll-glass-border);
+  border-radius: var(--vll-radius);
+  padding: 16px 24px;
+  box-shadow: var(--vll-shadow);
+  text-align: center;
+  animation: vllSlideUp 0.3s ease-out;
+}
+
+@keyframes vllSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Subtitle Lines ──────────────────────────────────────── */
+
+.vll-line-hanzi {
+  font-family: var(--vll-font-cjk);
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--vll-text);
+  line-height: 1.6;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+}
+
+.vll-line-pinyin {
+  font-family: var(--vll-font-latin);
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--vll-text-pinyin);
+  line-height: 1.4;
+  margin-bottom: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+
+.vll-line-translation {
+  font-family: var(--vll-font-latin);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--vll-text-dim);
+  line-height: 1.4;
+  padding-top: 6px;
+  border-top: 1px solid var(--vll-glass-border);
+}
+
+/* ── Word Spans (Interactive) ────────────────────────────── */
+
+.vll-word {
+  cursor: pointer;
+  padding: 2px 3px;
+  border-radius: 4px;
+  transition: all var(--vll-transition);
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.vll-word:hover {
+  background: var(--vll-glass);
+  transform: scale(1.05);
+}
+
+.vll-word .vll-word-hanzi {
+  font-family: var(--vll-font-cjk);
+  font-size: 26px;
+}
+
+.vll-word .vll-word-pinyin {
+  font-family: var(--vll-font-latin);
+  font-size: 11px;
+  color: var(--vll-text-pinyin);
+  opacity: 0.8;
+  line-height: 1.2;
+}
+
+/* ── Word Color States ───────────────────────────────────── */
+
+.vll-word[data-color="red"] {
+  border-bottom: 2px solid var(--vll-red);
+  background: var(--vll-red-bg);
+}
+
+.vll-word[data-color="orange"] {
+  border-bottom: 2px solid var(--vll-orange);
+  background: var(--vll-orange-bg);
+}
+
+.vll-word[data-color="green"] {
+  border-bottom: 2px solid var(--vll-green);
+  background: var(--vll-green-bg);
+}
+
+.vll-word[data-color="white"] {
+  border-bottom: 2px solid transparent;
+}
+
+/* ── Tooltip (Glassmorphism) ─────────────────────────────── */
+
+.vll-tooltip {
+  position: fixed;
+  z-index: 99999;
+  min-width: 260px;
+  max-width: 360px;
+  background: var(--vll-bg);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--vll-glass-border);
+  border-radius: var(--vll-radius);
+  padding: 20px;
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(124, 108, 240, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  animation: vllTooltipIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: auto;
+  font-family: var(--vll-font-latin);
+}
+
+@keyframes vllTooltipIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.vll-tooltip-hanzi {
+  font-family: var(--vll-font-cjk);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--vll-text);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.vll-tooltip-pinyin {
+  font-family: var(--vll-font-latin);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--vll-accent);
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.vll-tooltip-meaning {
+  font-size: 14px;
+  color: var(--vll-text);
+  line-height: 1.6;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--vll-radius-sm);
+  border-left: 3px solid var(--vll-accent);
+}
+
+.vll-tooltip-context {
+  font-size: 12px;
+  color: var(--vll-text-dim);
+  font-style: italic;
+  margin-bottom: 12px;
+}
+
+/* ── Color Buttons ───────────────────────────────────────── */
+
+.vll-color-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.vll-color-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: all var(--vll-transition);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0;
+}
+
+.vll-color-btn:hover {
+  transform: scale(1.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+}
+
+.vll-color-btn.active {
+  border-width: 3px;
+  box-shadow: 0 0 16px currentColor;
+}
+
+.vll-color-btn.active::after {
+  content: '✓';
+  font-size: 14px;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.vll-color-btn[data-color="red"] {
+  background: var(--vll-red);
+  color: var(--vll-red);
+}
+
+.vll-color-btn[data-color="orange"] {
+  background: var(--vll-orange);
+  color: var(--vll-orange);
+}
+
+.vll-color-btn[data-color="green"] {
+  background: var(--vll-green);
+  color: var(--vll-green);
+}
+
+.vll-color-btn[data-color="white"] {
+  background: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ── Remove Button ───────────────────────────────────────── */
+
+.vll-remove-btn {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--vll-radius-sm);
+  color: var(--vll-text-dim);
+  font-size: 12px;
+  font-family: var(--vll-font-latin);
+  cursor: pointer;
+  transition: all var(--vll-transition);
+  text-align: center;
+}
+
+.vll-remove-btn:hover {
+  background: rgba(255, 68, 102, 0.15);
+  color: var(--vll-red);
+  border-color: rgba(255, 68, 102, 0.3);
+}
+
+/* ── Loading State ───────────────────────────────────────── */
+
+.vll-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9998;
+  padding: 16px 24px;
+  background: var(--vll-bg);
+  backdrop-filter: blur(16px);
+  border-radius: var(--vll-radius);
+  border: 1px solid var(--vll-glass-border);
+  color: var(--vll-text);
+  font-family: var(--vll-font-latin);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--vll-shadow);
+}
+
+.vll-loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--vll-accent);
+  border-radius: 50%;
+  animation: vllSpin 0.8s linear infinite;
+}
+
+@keyframes vllSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── VLL Badge (bottom-right of player) ──────────────────── */
+
+.vll-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 9997;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, rgba(124, 108, 240, 0.2), rgba(100, 80, 200, 0.1));
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(124, 108, 240, 0.2);
+  border-radius: 20px;
+  color: var(--vll-accent);
+  font-family: var(--vll-font-latin);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all var(--vll-transition);
+  user-select: none;
+}
+
+.vll-badge:hover {
+  background: linear-gradient(135deg, rgba(124, 108, 240, 0.35), rgba(100, 80, 200, 0.2));
+  transform: scale(1.05);
+}
+
+/* ── Hide native YouTube captions when VLL is active ─────── */
+
+.vll-active .ytp-caption-window-container {
+  opacity: 0.15 !important;
+  transition: opacity 0.3s ease;
+}
+
+/* ── Fullscreen adjustments ──────────────────────────────── */
+
+:fullscreen .vll-overlay,
+:-webkit-full-screen .vll-overlay {
+  bottom: 80px;
+}
+
+:fullscreen .vll-line-hanzi .vll-word .vll-word-hanzi,
+:-webkit-full-screen .vll-line-hanzi .vll-word .vll-word-hanzi {
+  font-size: 32px;
+}
+
+:fullscreen .vll-line-pinyin,
+:-webkit-full-screen .vll-line-pinyin {
+  font-size: 17px;
+}
+
+:fullscreen .vll-line-translation,
+:-webkit-full-screen .vll-line-translation {
+  font-size: 22px;
+}
