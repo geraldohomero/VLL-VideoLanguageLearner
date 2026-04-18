@@ -30,6 +30,10 @@ A extensão aprimora a experiência de visualização adicionando legendas inter
 
 Como a extensão ainda está em desenvolvimento, você pode instalá-la manualmente no seu navegador:
 
+- [Download](https://github.com/geraldohomero/VLL-VideoLanguageLearner/releases)
+
+Ou
+
 1. Faça o clone deste repositório na sua máquina:
    ```bash
    git clone https://github.com/geraldohomero/VLL.git
