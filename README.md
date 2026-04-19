@@ -10,14 +10,6 @@ O **Video Language Learner (VLL)** é uma extensão para Google Chrome (Manifest
 
 A extensão aprimora a experiência de visualização adicionando legendas interativas e personalizadas que facilitam a compreensão e a retenção de novo vocabulário.
 
-## Principais Recursos
-
-- **Legendas Multi-camadas:** Exibe simultaneamente os caracteres chineses originais (Hanzi), o Pinyin (romanização) e a tradução para o Português diretamente no vídeo do YouTube.
-- **Dicionário Offline Integrado:** Traduções rápidas e instantâneas sem depender de conexões de rede ou APIs instáveis.
-- **Tooltip e Inspeção de Palavras:** Passe o mouse sobre os caracteres nas legendas para obter traduções, definições e detalhes do vocabulário em tempo real (Hover Tooltip).
-- **Sistema de Cores para Níveis de Conhecimento:** Identifique e marque visualmente o seu nível de domínio das palavras usando um sistema prático de cores.
-- **Exportação para o Anki:** Salve rapidamente novas palavras e frases que você aprendeu para revisá-las e memorizá-las de forma espaçada criando cards no Anki.
-- **Painel Lateral (Side Panel) / HUD:** Uma interface amigável para gerenciar o vocabulário, preferências de exibição e interagir com o conteúdo do vídeo de modo lado-a-lado.
 
 ![alt text](/assets/img/Image1.png)
 
@@ -41,11 +33,6 @@ A extensão aprimora a experiência de visualização adicionando legendas inter
       </td>
    </tr>
 </table>
-
-## Tecnologias Utilizadas
-
-- **HTML, CSS e JavaScript (Vanilla)**
-- **Chrome Extensions API:** Manipulação do DOM (`content_scripts`), processos em segundo plano (`service_worker`) e painel lateral (`side_panel`).
 
 ## Como Instalar (Modo Desenvolvedor)
 
@@ -74,6 +61,20 @@ chrome://extensions/
 2. A extensão processará as legendas originais e renderizará automaticamente a interface multi-camadas (Hanzi, Pinyin e Tradução).
 3. **Passe o mouse** sobre os caracteres para abrir o dicionário pop-up.
 4. Clique no ícone da extensão para abrir o painel lateral e gerenciar suas palavras salvas e exportar o seu progresso para o Anki.
+
+## Principais Recursos
+
+- **Legendas Multi-camadas:** Exibe simultaneamente os caracteres chineses originais (Hanzi), o Pinyin (romanização) e a tradução para o Português diretamente no vídeo do YouTube.
+- **Dicionário Offline Integrado:** Traduções rápidas e instantâneas sem depender de conexões de rede ou APIs instáveis.
+- **Tooltip e Inspeção de Palavras:** Passe o mouse sobre os caracteres nas legendas para obter traduções, definições e detalhes do vocabulário em tempo real (Hover Tooltip).
+- **Sistema de Cores para Níveis de Conhecimento:** Identifique e marque visualmente o seu nível de domínio das palavras usando um sistema prático de cores.
+- **Exportação para o Anki:** Salve rapidamente novas palavras e frases que você aprendeu para revisá-las e memorizá-las de forma espaçada criando cards no Anki.
+- **Painel Lateral (Side Panel) / HUD:** Uma interface amigável para gerenciar o vocabulário, preferências de exibição e interagir com o conteúdo do vídeo de modo lado-a-lado.
+
+## Tecnologias Utilizadas
+
+- **HTML, CSS e JavaScript (Vanilla)**
+- **Chrome Extensions API:** Manipulação do DOM (`content_scripts`), processos em segundo plano (`service_worker`) e painel lateral (`side_panel`).
 
 ## Contribuição
 
