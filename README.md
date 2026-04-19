@@ -1,5 +1,9 @@
 # VLL — Video Language Learner
 
+<p align="center">
+   <img src="icons/icon.png" alt="VLL Icon" width="128" />
+</p>
+
 O **Video Language Learner (VLL)** é uma extensão para Google Chrome (Manifest V3) desenvolvida para ajudar estudantes de mandarim a aprenderem o idioma enquanto assistem a vídeos no YouTube. 
 
 > Inicialmente projetado para falantes de Português(BR) aprenderem Chinês (Mandarim), mas poderá ser adaptado para outros idiomas no futuro
