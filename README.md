@@ -62,7 +62,7 @@ Ou
 5. Selecione a pasta raiz do projeto `VLL` no seu computador.
 6. Pronto! A extensão estará instalada. Fixe-a na barra de extensões para facilitar o acesso.
 
-![alt text](assets/img/image-4.png)
+![alt text](image-1.png)
 
 ## Como Usar
 
