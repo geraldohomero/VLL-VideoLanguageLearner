@@ -17,7 +17,8 @@ A extensão aprimora a experiência de visualização adicionando legendas inter
 
 ![alt text](assets/img/Image1.png)
 
-![alt text](assets/img/Image2.png)]
+![alt text](assets/img/Image2.png)
+
 <table style="width: 100%; border-collapse: collapse;">
    <tr>
       <td align="center" width="33%">
