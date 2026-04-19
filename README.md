@@ -17,20 +17,22 @@ A extensão aprimora a experiência de visualização adicionando legendas inter
 
 ![alt text](assets/img/image.png)
 
-<div style="display: flex; gap: 12px; align-items: flex-start; justify-content: center; flex-wrap: wrap;">
-   <div style="flex: 1; min-width: 220px; max-width: 320px; text-align: center;">
-      <h3>Legendas</h3>
-      <img src="assets/img/image-1.png" alt="Legendas" style="width: 100%; border-radius: 8px;" />
-   </div>
-   <div style="flex: 1; min-width: 220px; max-width: 320px; text-align: center;">
-      <h3>Vocabulário</h3>
-      <img src="assets/img/image-3.png" alt="Vocabulário" style="width: 100%; border-radius: 8px;" />
-   </div>
-   <div style="flex: 1; min-width: 220px; max-width: 320px; text-align: center;">
-      <h3>Configurações</h3>
-      <img src="assets/img/image-5.png" alt="Configurações" style="width: 100%; border-radius: 8px;" />
-   </div>
-</div>
+<table style="width: 100%; border-collapse: collapse;">
+   <tr>
+      <td align="center" width="33%">
+         <strong>Legendas</strong><br />
+         <img src="assets/img/image-1.png" alt="Legendas" width="88%" />
+      </td>
+      <td align="center" width="33%">
+         <strong>Vocabulário</strong><br />
+         <img src="assets/img/image-3.png" alt="Vocabulário" width="88%" />
+      </td>
+      <td align="center" width="33%">
+         <strong>Configurações</strong><br />
+         <img src="assets/img/image-5.png" alt="Configurações" width="88%" />
+      </td>
+   </tr>
+</table>
 
 ## Tecnologias Utilizadas
 
