@@ -15,21 +15,22 @@ A extensão aprimora a experiência de visualização adicionando legendas inter
 - **Exportação para o Anki:** Salve rapidamente novas palavras e frases que você aprendeu para revisá-las e memorizá-las de forma espaçada criando cards no Anki.
 - **Painel Lateral (Side Panel) / HUD:** Uma interface amigável para gerenciar o vocabulário, preferências de exibição e interagir com o conteúdo do vídeo de modo lado-a-lado.
 
-![alt text](assets/img/image.png)
+![alt text](assets/img/Image1.png)
 
+![alt text](assets/img/Image2.png)]
 <table style="width: 100%; border-collapse: collapse;">
    <tr>
       <td align="center" width="33%">
          <strong>Legendas</strong><br />
-         <img src="assets/img/image-1.png" alt="Legendas" width="88%" />
+         <img src="assets/img/image01.png" alt="Legendas" width="88%" />
       </td>
       <td align="center" width="33%">
          <strong>Vocabulário</strong><br />
-         <img src="assets/img/image-3.png" alt="Vocabulário" width="88%" />
+         <img src="assets/img/image02.png" alt="Vocabulário" width="88%" />
       </td>
       <td align="center" width="33%">
          <strong>Configurações</strong><br />
-         <img src="assets/img/image-5.png" alt="Configurações" width="88%" />
+         <img src="assets/img/image03.png" alt="Configurações" width="88%" />
       </td>
    </tr>
 </table>
