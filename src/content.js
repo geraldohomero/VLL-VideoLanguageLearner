@@ -22,12 +22,19 @@
     wordColors: {}, // Saved word colors
     ptMeanings: {}, // Cached Portuguese meanings
     ptTrack: [],    // Portuguese subtitle lines
+    lookupStatus: {
+      inProgress: false,
+      googleReady: false,
+      targetLang: 'pt',
+      lastError: ''
+    },
     settings: {
       enabled: true,
       showPinyin: true,
       showHanzi: true,
       showTranslation: true,
       targetLang: 'pt',
+      lookupProvider: 'dictionary',
       autoPause: false
     }
   };
@@ -118,8 +125,17 @@
       // Step 3: Send to service worker for dictionary lookup + color lookup
       const response = await chrome.runtime.sendMessage({
         type: 'BATCH_LOOKUP',
-        words: uniqueWords
+        words: uniqueWords,
+        provider: vllState.settings.lookupProvider || 'dictionary',
+        targetLang: vllState.settings.targetLang || 'pt'
       });
+
+      // Start Google lookup preload in background without blocking startup.
+      chrome.runtime.sendMessage({
+        type: 'PRELOAD_GOOGLE_LOOKUP',
+        words: uniqueWords,
+        targetLang: vllState.settings.targetLang || 'pt'
+      }).catch(() => {});
 
       vllState.dictData = response.dictData || {};
       vllState.wordColors = response.colorData || {};
@@ -183,6 +199,7 @@
         hanzi: seg.segment,
         pinyin: dict ? dict.pinyin : '',
         meaning: dict ? dict.meaning : '',
+        meaningLang: dict ? (dict.meaningLang || 'en') : '',
         isWord: seg.isWordLike,
         color: color
       });
@@ -226,11 +243,29 @@
   }
 
   function createPermanentControls() {
-    if (controlsEl) return;
+    if (!playerEl) return;
+
+    if (controlsEl) {
+      if (!playerEl.contains(controlsEl)) {
+        playerEl.appendChild(controlsEl);
+      }
+      const toggleBtn = controlsEl.querySelector('.vll-toggle-btn');
+      if (toggleBtn) updateToggleButton(toggleBtn);
+      return;
+    }
+
     controlsEl = document.createElement('div');
     controlsEl.className = 'vll-controls';
 
-    // Toggle button
+    const sidepanelBtn = document.createElement('div');
+    sidepanelBtn.className = 'vll-badge';
+    sidepanelBtn.textContent = 'Painel';
+    sidepanelBtn.title = 'Abrir/fechar painel lateral do VLL';
+    sidepanelBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      chrome.runtime.sendMessage({ type: 'TOGGLE_SIDEPANEL' }).catch(() => {});
+    });
+
     const toggleBtn = document.createElement('div');
     toggleBtn.className = 'vll-badge vll-toggle-btn';
     updateToggleButton(toggleBtn);
@@ -239,10 +274,12 @@
       const newEnabled = !vllState.settings.enabled;
       vllState.settings.enabled = newEnabled;
       updateToggleButton(toggleBtn);
+
       chrome.runtime.sendMessage({
         type: 'SAVE_SETTINGS',
         settings: vllState.settings
-      });
+      }).catch(() => {});
+
       if (newEnabled) {
         startVLL();
       } else {
@@ -250,19 +287,8 @@
       }
     });
 
-    // Sidepanel button
-    const sidepanelBtn = document.createElement('div');
-    sidepanelBtn.className = 'vll-badge';
-    sidepanelBtn.textContent = 'VLL ✦';
-    sidepanelBtn.title = 'Video Language Learner — Painel';
-    sidepanelBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      chrome.runtime.sendMessage({ type: 'OPEN_SIDEPANEL' });
-    });
-
     controlsEl.appendChild(sidepanelBtn);
     controlsEl.appendChild(toggleBtn);
-
     playerEl.appendChild(controlsEl);
   }
 
@@ -398,6 +424,10 @@
       if (vllState.ptMeanings[wordData.hanzi]) {
         wordData.meaningPt = vllState.ptMeanings[wordData.hanzi];
         meaningEl.textContent = wordData.meaningPt;
+      } else if (wordData.meaningLang === 'pt') {
+        wordData.meaningPt = wordData.meaning;
+        vllState.ptMeanings[wordData.hanzi] = wordData.meaning;
+        meaningEl.textContent = wordData.meaning;
       } else {
         // Show English while translating
         meaningEl.textContent = `${wordData.meaning} (Traduzindo...)`;
@@ -405,6 +435,7 @@
         chrome.runtime.sendMessage({
           type: 'TRANSLATE_TEXT',
           text: wordData.meaning,
+          sourceLang: wordData.meaningLang || 'en',
           targetLang: 'pt'
         }).then(res => {
           if (res && res.translatedText) {
@@ -667,25 +698,37 @@
 
       case 'SETTINGS_CHANGED': {
         const wasEnabled = vllState.settings.enabled;
+        const prevProvider = vllState.settings.lookupProvider;
+        const prevTargetLang = vllState.settings.targetLang;
         vllState.settings = { ...vllState.settings, ...msg.settings };
         
         if (wasEnabled && !vllState.settings.enabled) {
           cleanup();
         } else if (!wasEnabled && vllState.settings.enabled) {
           startVLL();
+        } else if (
+          vllState.settings.enabled &&
+          (prevProvider !== vllState.settings.lookupProvider || prevTargetLang !== vllState.settings.targetLang)
+        ) {
+          startVLL();
         }
-        
+
         if (controlsEl) {
           const toggleBtn = controlsEl.querySelector('.vll-toggle-btn');
           if (toggleBtn) updateToggleButton(toggleBtn);
         }
-
+        
         if (vllState.settings.enabled && vllState.currentIndex >= 0) {
           renderSubtitle(vllState.subtitles[vllState.currentIndex]);
         }
         sendResponse({ ok: true });
         break;
       }
+
+      case 'LOOKUP_STATUS_CHANGED':
+        if (msg.status) vllState.lookupStatus = { ...vllState.lookupStatus, ...msg.status };
+        sendResponse({ ok: true });
+        break;
 
       case 'WORD_COLOR_UPDATED':
         if (msg.word && msg.color) {

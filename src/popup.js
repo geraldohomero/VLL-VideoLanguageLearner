@@ -8,6 +8,50 @@
   'use strict';
 
   const $id = (id) => document.getElementById(id);
+  let lookupStatusPollTimer = null;
+
+  function getLookupProviderValue() {
+    const select = $id('lookup-provider-select');
+    if (!select) return 'dictionary';
+    return select.value || 'dictionary';
+  }
+
+  function applyLookupStatus(status) {
+    const loadingSetting = $id('lookup-loading-setting');
+    const loadingNote = $id('lookup-loading-note');
+    const providerSetting = $id('lookup-provider-setting');
+
+    if (!loadingSetting || !providerSetting) return;
+
+    if (status && status.googleReady) {
+      loadingSetting.style.display = 'none';
+      providerSetting.style.display = 'block';
+      return;
+    }
+
+    providerSetting.style.display = 'none';
+    loadingSetting.style.display = 'block';
+
+    if (loadingNote) {
+      if (status && status.inProgress) {
+        loadingNote.textContent = 'Google carregando em segundo plano... usando dicionário local por enquanto.';
+      } else if (status && status.lastError) {
+        loadingNote.textContent = `Google indisponível no momento (${status.lastError}). Mantendo dicionário local.`;
+      } else {
+        loadingNote.textContent = 'Preparando Google em segundo plano... usando dicionário local por enquanto.';
+      }
+    }
+  }
+
+  async function loadLookupStatus() {
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'GET_LOOKUP_STATUS' });
+      applyLookupStatus(response.status || {});
+    } catch (err) {
+      console.error('[VLL Popup] Failed to load lookup status:', err);
+      applyLookupStatus({});
+    }
+  }
 
   /* ── Load Stats ──────────────────────────────────────────── */
 
@@ -37,6 +81,9 @@
       if (settings.targetLang) {
         $id('lang-select').value = settings.targetLang;
       }
+      if (settings.lookupProvider) {
+        $id('lookup-provider-select').value = settings.lookupProvider;
+      }
       if (settings.showPinyin !== undefined) {
         $id('toggle-pinyin').checked = settings.showPinyin;
       }
@@ -57,6 +104,7 @@
     const settings = {
       enabled: $id('toggle-enabled').checked,
       targetLang: $id('lang-select').value,
+      lookupProvider: getLookupProviderValue(),
       showPinyin: $id('toggle-pinyin').checked,
       showTranslation: $id('toggle-translation').checked,
       autoPause: $id('toggle-autopause').checked
@@ -75,9 +123,16 @@
   // Auto-save on changes
   $id('toggle-enabled').addEventListener('change', saveSettings);
   $id('lang-select').addEventListener('change', saveSettings);
+  $id('lookup-provider-select').addEventListener('change', saveSettings);
   $id('toggle-pinyin').addEventListener('change', saveSettings);
   $id('toggle-translation').addEventListener('change', saveSettings);
   $id('toggle-autopause').addEventListener('change', saveSettings);
+
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg.type === 'LOOKUP_STATUS_CHANGED' && msg.status) {
+      applyLookupStatus(msg.status);
+    }
+  });
 
   /* ── Open Side Panel ─────────────────────────────────────── */
 
@@ -177,5 +232,12 @@
 
   loadStats();
   loadSettings();
+  loadLookupStatus();
   loadVocabList();
+
+  // Keep popup status responsive while open.
+  lookupStatusPollTimer = setInterval(loadLookupStatus, 2000);
+  window.addEventListener('beforeunload', () => {
+    if (lookupStatusPollTimer) clearInterval(lookupStatusPollTimer);
+  });
 })();

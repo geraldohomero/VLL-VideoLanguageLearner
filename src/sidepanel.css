@@ -499,3 +499,150 @@ body {
   color: #ff4466;
   border-color: rgba(255, 68, 102, 0.3);
 }
+
+/* ── Settings Panel ─────────────────────────────────────── */
+
+.vll-settings-group {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.vll-settings-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #666680;
+  margin-bottom: 10px;
+}
+
+.vll-setting-item {
+  margin-bottom: 12px;
+}
+
+.vll-setting-item:last-child {
+  margin-bottom: 0;
+}
+
+.vll-setting-label {
+  display: block;
+  font-size: 12px;
+  color: #8888aa;
+  margin-bottom: 6px;
+}
+
+.vll-setting-select {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(18, 18, 34, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: #e0e0f0;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #7c6cf0 50%), linear-gradient(135deg, #7c6cf0 50%, transparent 50%);
+  background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+.vll-setting-select:focus {
+  border-color: rgba(124, 108, 240, 0.4);
+  box-shadow: 0 0 0 2px rgba(124, 108, 240, 0.16);
+}
+
+.vll-setting-select option {
+  background: #141428;
+  color: #e8e8f0;
+}
+
+.vll-setting-note {
+  font-size: 11px;
+  color: #9b9bbb;
+  line-height: 1.35;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.vll-toggle-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 13px;
+  color: #c0c0d0;
+  padding: 4px 0;
+}
+
+.vll-toggle-label input {
+  display: none;
+}
+
+.vll-toggle-slider {
+  width: 40px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 11px;
+  position: relative;
+  transition: background 0.3s;
+  flex-shrink: 0;
+}
+
+.vll-toggle-slider::after {
+  content: '';
+  width: 18px;
+  height: 18px;
+  background: #555;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: all 0.3s;
+}
+
+.vll-toggle-label input:checked + .vll-toggle-slider {
+  background: rgba(124, 108, 240, 0.4);
+}
+
+.vll-toggle-label input:checked + .vll-toggle-slider::after {
+  background: #7c6cf0;
+  transform: translateX(18px);
+}
+
+.vll-settings-actions {
+  margin-top: 4px;
+}
+
+.vll-settings-btn {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid rgba(68, 221, 136, 0.18);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(68, 221, 136, 0.14), rgba(40, 180, 100, 0.08));
+  color: #44dd88;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vll-settings-btn:hover {
+  background: linear-gradient(135deg, rgba(68, 221, 136, 0.2), rgba(40, 180, 100, 0.15));
+  border-color: rgba(68, 221, 136, 0.28);
+}
+
+.vll-settings-btn:active {
+  transform: translateY(1px);
+}
+
+#sp-export-info {
+  margin-top: 8px;
+}

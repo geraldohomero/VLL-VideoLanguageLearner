@@ -60,6 +60,20 @@
       </select>
     </div>
 
+    <div class="popup-setting" id="lookup-loading-setting">
+      <label class="popup-label">Fonte de definições</label>
+      <div class="popup-setting-note" id="lookup-loading-note">Google carregando em segundo plano... usando dicionário local por enquanto.</div>
+    </div>
+
+    <div class="popup-setting" id="lookup-provider-setting" style="display:none;">
+      <label class="popup-label" for="lookup-provider-select">Fonte de definições</label>
+      <select class="popup-select" id="lookup-provider-select">
+        <option value="dictionary">Dicionário offline (CC-CEDICT)</option>
+        <option value="google">Google Translate</option>
+      </select>
+      <div class="popup-setting-note" id="lookup-provider-note">Google pronto. Escolha a fonte que preferir.</div>
+    </div>
+
     <div class="popup-setting">
       <label class="popup-toggle-label">
         <span>Mostrar Pinyin</span>
@@ -85,14 +99,6 @@
     </div>
   </section>
 
-  <!-- Saved Words -->
-  <section class="popup-section" id="popup-vocab-section">
-    <h3 class="popup-section-title">Palavras Salvas</h3>
-    <div class="popup-vocab-list" id="popup-vocab-list">
-      <div class="popup-vocab-empty">Carregando...</div>
-    </div>
-  </section>
-
   <!-- Actions -->
   <section class="popup-section">
     <button class="popup-btn popup-btn-primary" id="btn-sidepanel">
@@ -102,6 +108,14 @@
       📥 Exportar para Anki (CSV)
     </button>
     <div class="popup-export-info" id="export-info" style="display:none"></div>
+  </section>
+
+  <!-- Saved Words -->
+  <section class="popup-section" id="popup-vocab-section">
+    <h3 class="popup-section-title">Palavras Salvas</h3>
+    <div class="popup-vocab-list" id="popup-vocab-list">
+      <div class="popup-vocab-empty">Carregando...</div>
+    </div>
   </section>
 
   <!-- Footer -->

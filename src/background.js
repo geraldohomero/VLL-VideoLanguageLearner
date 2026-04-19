@@ -7,6 +7,229 @@
 
 importScripts('database.js', 'dictionary.js', 'export.js');
 
+const VLL_GOOGLE_LOOKUP_CONCURRENCY = 6;
+const VLL_LOOKUP_PROVIDER_DICTIONARY = 'dictionary';
+const VLL_LOOKUP_PROVIDER_GOOGLE = 'google';
+const _vllSidepanelOpenTabs = new Set();
+
+const _vllGoogleLookupState = {
+  inProgress: false,
+  ready: false,
+  targetLang: 'pt',
+  cache: Object.create(null),
+  loadedWords: new Set(),
+  lastError: ''
+};
+
+function vllParseGoogleTranslationResponse(data) {
+  const chunks = Array.isArray(data?.[0]) ? data[0] : [];
+
+  const translatedText = chunks
+    .map(chunk => (typeof chunk?.[0] === 'string' ? chunk[0] : ''))
+    .join('')
+    .trim();
+
+  const romanizedText = chunks
+    .map(chunk => (typeof chunk?.[3] === 'string' ? chunk[3] : ''))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return { translatedText, romanizedText };
+}
+
+async function vllTranslateWithGoogle(text, sourceLang = 'auto', targetLang = 'pt') {
+  if (!text || !text.trim()) {
+    return { translatedText: '', romanizedText: '' };
+  }
+
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sourceLang)}&tl=${encodeURIComponent(targetLang)}&dt=t&dt=rm&q=${encodeURIComponent(text)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Translate HTTP ${res.status}`);
+
+  const data = await res.json();
+  if (!Array.isArray(data) || !Array.isArray(data[0])) {
+    return { translatedText: '', romanizedText: '' };
+  }
+
+  return vllParseGoogleTranslationResponse(data);
+}
+
+async function vllBatchLookupWithGoogle(words, targetLang = 'pt') {
+  const dictData = Object.create(null);
+  const queue = (words || []).filter(Boolean);
+  const workerCount = Math.max(1, Math.min(VLL_GOOGLE_LOOKUP_CONCURRENCY, queue.length || 1));
+
+  async function worker() {
+    while (queue.length > 0) {
+      const word = queue.shift();
+      try {
+        const translated = await vllTranslateWithGoogle(word, 'zh-CN', targetLang);
+        if (translated.translatedText) {
+          dictData[word] = {
+            pinyin: translated.romanizedText || '',
+            meaning: translated.translatedText,
+            meaningLang: targetLang
+          };
+        }
+      } catch (err) {
+        console.warn('[VLL] Google lookup failed for word:', word, err.message);
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return dictData;
+}
+
+function vllResetGoogleLookupState(targetLang = 'pt') {
+  _vllGoogleLookupState.inProgress = false;
+  _vllGoogleLookupState.ready = false;
+  _vllGoogleLookupState.targetLang = targetLang;
+  _vllGoogleLookupState.cache = Object.create(null);
+  _vllGoogleLookupState.loadedWords = new Set();
+  _vllGoogleLookupState.lastError = '';
+}
+
+function vllGetLookupStatus() {
+  return {
+    inProgress: _vllGoogleLookupState.inProgress,
+    googleReady: _vllGoogleLookupState.ready,
+    targetLang: _vllGoogleLookupState.targetLang,
+    lastError: _vllGoogleLookupState.lastError
+  };
+}
+
+async function vllNotifyLookupStatusChanged() {
+  const status = vllGetLookupStatus();
+  try {
+    await chrome.runtime.sendMessage({ type: 'LOOKUP_STATUS_CHANGED', status });
+  } catch {
+    // No listeners (normal when popup/content is closed).
+  }
+
+  try {
+    const tabs = await chrome.tabs.query({ url: '*://*.youtube.com/*' });
+    for (const tab of tabs) {
+      chrome.tabs.sendMessage(tab.id, { type: 'LOOKUP_STATUS_CHANGED', status }).catch(() => {});
+    }
+  } catch {
+    // Ignore tab query/send failures.
+  }
+}
+
+async function vllPreloadGoogleLookup(words, targetLang = 'pt') {
+  const requestedWords = (words || []).filter(Boolean);
+  if (requestedWords.length === 0) {
+    if (!_vllGoogleLookupState.ready) {
+      _vllGoogleLookupState.ready = true;
+      await vllNotifyLookupStatusChanged();
+    }
+    return { ok: true, ...vllGetLookupStatus(), loadedCount: 0 };
+  }
+
+  // New language invalidates previous preload cache.
+  if (_vllGoogleLookupState.targetLang !== targetLang) {
+    vllResetGoogleLookupState(targetLang);
+  }
+
+  const missing = requestedWords.filter(w => !_vllGoogleLookupState.loadedWords.has(w));
+  if (missing.length === 0) {
+    if (!_vllGoogleLookupState.ready) {
+      _vllGoogleLookupState.ready = true;
+      await vllNotifyLookupStatusChanged();
+    }
+    return {
+      ok: true,
+      ...vllGetLookupStatus(),
+      loadedCount: requestedWords.length
+    };
+  }
+
+  _vllGoogleLookupState.inProgress = true;
+  _vllGoogleLookupState.lastError = '';
+  await vllNotifyLookupStatusChanged();
+
+  try {
+    const batch = await vllBatchLookupWithGoogle(missing, targetLang);
+    for (const word of missing) {
+      if (batch[word]) {
+        _vllGoogleLookupState.cache[word] = batch[word];
+      }
+      _vllGoogleLookupState.loadedWords.add(word);
+    }
+    _vllGoogleLookupState.ready = true;
+  } catch (err) {
+    _vllGoogleLookupState.lastError = err.message || 'Erro desconhecido';
+  } finally {
+    _vllGoogleLookupState.inProgress = false;
+    await vllNotifyLookupStatusChanged();
+  }
+
+  return {
+    ok: true,
+    ...vllGetLookupStatus(),
+    loadedCount: requestedWords.length
+  };
+}
+
+async function vllGetLookupDataForProvider(words, provider, targetLang = 'pt') {
+  const safeWords = (words || []).filter(Boolean);
+  const selectedProvider = provider || VLL_LOOKUP_PROVIDER_DICTIONARY;
+
+  if (selectedProvider === VLL_LOOKUP_PROVIDER_GOOGLE) {
+    // Non-blocking behavior: use whatever is already cached from Google,
+    // then fall back to local dictionary for missing words while preload runs.
+    const dictData = Object.create(null);
+    const missingWords = [];
+
+    for (const w of safeWords) {
+      if (_vllGoogleLookupState.cache[w]) {
+        dictData[w] = _vllGoogleLookupState.cache[w];
+      } else {
+        missingWords.push(w);
+      }
+    }
+
+    if (missingWords.length > 0) {
+      // Kick off (or continue) Google preload in background without blocking UI.
+      vllPreloadGoogleLookup(safeWords, targetLang).catch(() => {});
+
+      // Immediate fallback so subtitles render fast.
+      await vllLoadDictionary();
+      const fallback = vllBatchLookup(missingWords);
+      for (const [word, data] of Object.entries(fallback)) {
+        dictData[word] = data;
+      }
+    }
+
+    return dictData;
+  }
+
+  await vllLoadDictionary();
+  return vllBatchLookup(safeWords);
+}
+
+async function vllBroadcastWordColorUpdate(tabId, word, color) {
+  const payload = {
+    type: 'WORD_COLOR_UPDATED',
+    word,
+    color
+  };
+
+  // Notify content script in the originating YouTube tab.
+  if (Number.isInteger(tabId)) {
+    chrome.tabs.sendMessage(tabId, payload).catch(() => {});
+  }
+
+  // Notify extension pages (side panel, popup, etc.).
+  try {
+    await chrome.runtime.sendMessage(payload);
+  } catch {
+    // No listeners currently open.
+  }
+}
+
 /* ── Startup ───────────────────────────────────────────────── */
 
 // Load dictionary on install/startup
@@ -38,16 +261,24 @@ async function handleMessage(msg, sender) {
     /* ── Dictionary Operations ─────────────────────────────── */
 
     case 'BATCH_LOOKUP': {
-      // Ensure dictionary is loaded
-      await vllLoadDictionary();
-
-      // Look up each word in dictionary
-      const dictData = vllBatchLookup(msg.words || []);
+      const targetLang = msg.targetLang || 'pt';
+      const provider = msg.provider || VLL_LOOKUP_PROVIDER_DICTIONARY;
+      const dictData = await vllGetLookupDataForProvider(msg.words || [], provider, targetLang);
 
       // Also get saved colors from IndexedDB
       const colorData = await vllGetWordColors(msg.words || []);
 
-      return { dictData, colorData };
+      return { dictData, colorData, status: vllGetLookupStatus() };
+    }
+
+    case 'PRELOAD_GOOGLE_LOOKUP': {
+      const targetLang = msg.targetLang || 'pt';
+      const result = await vllPreloadGoogleLookup(msg.words || [], targetLang);
+      return result;
+    }
+
+    case 'GET_LOOKUP_STATUS': {
+      return { status: vllGetLookupStatus() };
     }
 
     case 'LOOKUP_WORD': {
@@ -70,32 +301,19 @@ async function handleMessage(msg, sender) {
 
     case 'SAVE_WORD': {
       const result = await vllSaveWord(msg.entry);
-      // Notify content script of the color update
-      if (sender.tab) {
-        chrome.tabs.sendMessage(sender.tab.id, {
-          type: 'WORD_COLOR_UPDATED',
-          word: msg.entry.word,
-          color: msg.entry.color
-        }).catch(() => {});
-      }
+      await vllBroadcastWordColorUpdate(sender.tab?.id, msg.entry.word, msg.entry.color);
       return { ok: true, entry: result };
     }
 
     case 'UPDATE_COLOR': {
       const result = await vllUpdateColor(msg.word, msg.color);
-      // Notify content script
-      if (sender.tab) {
-        chrome.tabs.sendMessage(sender.tab.id, {
-          type: 'WORD_COLOR_UPDATED',
-          word: msg.word,
-          color: msg.color
-        }).catch(() => {});
-      }
+      await vllBroadcastWordColorUpdate(sender.tab?.id, msg.word, msg.color);
       return { ok: true, entry: result };
     }
 
     case 'DELETE_WORD': {
       await vllDeleteWord(msg.word);
+      await vllBroadcastWordColorUpdate(sender.tab?.id, msg.word, 'white');
       return { ok: true };
     }
 
@@ -121,13 +339,21 @@ async function handleMessage(msg, sender) {
     /* ── Settings ──────────────────────────────────────────── */
 
     case 'SAVE_SETTINGS': {
-      await chrome.storage.local.set({ vllSettings: msg.settings });
+      const existing = await chrome.storage.local.get(['vllSettings']);
+      const merged = { ...(existing.vllSettings || {}), ...(msg.settings || {}) };
+      await chrome.storage.local.set({ vllSettings: merged });
+
+      if (msg.settings && msg.settings.targetLang && msg.settings.targetLang !== _vllGoogleLookupState.targetLang) {
+        vllResetGoogleLookupState(msg.settings.targetLang);
+        await vllNotifyLookupStatusChanged();
+      }
+
       // Notify active YouTube tab
       const tabs = await chrome.tabs.query({ url: '*://*.youtube.com/*', active: true });
       for (const tab of tabs) {
         chrome.tabs.sendMessage(tab.id, {
           type: 'SETTINGS_CHANGED',
-          settings: msg.settings
+          settings: merged
         }).catch(() => {});
       }
       return { ok: true };
@@ -142,11 +368,11 @@ async function handleMessage(msg, sender) {
 
     case 'TRANSLATE_TEXT': {
       try {
-        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${msg.targetLang || 'pt'}&dt=t&q=${encodeURIComponent(msg.text)}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        const translatedText = data[0].map(x => x[0]).join('');
-        return { translatedText };
+        const result = await vllTranslateWithGoogle(msg.text, msg.sourceLang || 'en', msg.targetLang || 'pt');
+        return {
+          translatedText: result.translatedText,
+          romanizedText: result.romanizedText
+        };
       } catch (err) {
         console.error('[VLL] Translation failed:', err);
         return { error: err.message };
@@ -157,9 +383,37 @@ async function handleMessage(msg, sender) {
 
     case 'OPEN_SIDEPANEL': {
       if (sender.tab) {
+        chrome.sidePanel.setOptions({
+          tabId: sender.tab.id,
+          enabled: true,
+          path: 'src/sidepanel.html'
+        }).catch(() => {});
         await chrome.sidePanel.open({ tabId: sender.tab.id });
+        _vllSidepanelOpenTabs.add(sender.tab.id);
       }
       return { ok: true };
+    }
+
+    case 'TOGGLE_SIDEPANEL': {
+      if (!sender.tab) return { ok: false };
+
+      const tabId = sender.tab.id;
+      const isOpen = _vllSidepanelOpenTabs.has(tabId);
+
+      if (isOpen) {
+        await chrome.sidePanel.setOptions({ tabId, enabled: false });
+        _vllSidepanelOpenTabs.delete(tabId);
+        return { ok: true, open: false };
+      }
+
+      chrome.sidePanel.setOptions({
+        tabId,
+        enabled: true,
+        path: 'src/sidepanel.html'
+      }).catch(() => {});
+      await chrome.sidePanel.open({ tabId });
+      _vllSidepanelOpenTabs.add(tabId);
+      return { ok: true, open: true };
     }
 
     case 'GET_SUBTITLES': {
@@ -225,3 +479,7 @@ chrome.sidePanel.setOptions({
 chrome.sidePanel.setPanelBehavior({
   openPanelOnActionClick: false
 }).catch(() => {});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  _vllSidepanelOpenTabs.delete(tabId);
+});

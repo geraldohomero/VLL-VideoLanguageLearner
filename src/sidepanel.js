@@ -15,6 +15,7 @@
   let activeTab = 'transcript';
   let activeFilter = 'all';
   let selectedWord = null;
+  let lookupStatusPollTimer = null;
 
   /* ── DOM References ──────────────────────────────────────── */
 
@@ -28,6 +29,18 @@
   const vocabSearch = $id('vocab-search');
   const wordDetail = $id('word-detail');
   const videoTitle = $id('vll-video-title');
+
+  const settingsEls = {
+    enabled: $id('sp-toggle-enabled'),
+    targetLang: $id('sp-lang-select'),
+    lookupProvider: $id('sp-lookup-provider-select'),
+    showPinyin: $id('sp-toggle-pinyin'),
+    showTranslation: $id('sp-toggle-translation'),
+    autoPause: $id('sp-toggle-autopause'),
+    lookupLoadingSetting: $id('sp-lookup-loading-setting'),
+    lookupLoadingNote: $id('sp-lookup-loading-note'),
+    lookupProviderSetting: $id('sp-lookup-provider-setting')
+  };
 
   /* ── Tab Switching ───────────────────────────────────────── */
 
@@ -43,7 +56,146 @@
       $id(`panel-${tabName}`).classList.add('active');
 
       if (tabName === 'vocabulary') loadVocabulary();
+      if (tabName === 'settings') {
+        loadSettings();
+        loadLookupStatus();
+      }
     });
+  });
+
+  function getLookupProviderValue() {
+    if (!settingsEls.lookupProvider) return 'dictionary';
+    return settingsEls.lookupProvider.value || 'dictionary';
+  }
+
+  function applyLookupStatus(status) {
+    if (!settingsEls.lookupLoadingSetting || !settingsEls.lookupProviderSetting) return;
+
+    if (status && status.googleReady) {
+      settingsEls.lookupLoadingSetting.style.display = 'none';
+      settingsEls.lookupProviderSetting.style.display = 'block';
+      return;
+    }
+
+    settingsEls.lookupProviderSetting.style.display = 'none';
+    settingsEls.lookupLoadingSetting.style.display = 'block';
+
+    if (settingsEls.lookupLoadingNote) {
+      if (status && status.inProgress) {
+        settingsEls.lookupLoadingNote.textContent = 'Google carregando em segundo plano... usando dicionário local por enquanto.';
+      } else if (status && status.lastError) {
+        settingsEls.lookupLoadingNote.textContent = `Google indisponível no momento (${status.lastError}). Mantendo dicionário local.`;
+      } else {
+        settingsEls.lookupLoadingNote.textContent = 'Preparando Google em segundo plano... usando dicionário local por enquanto.';
+      }
+    }
+  }
+
+  async function loadLookupStatus() {
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'GET_LOOKUP_STATUS' });
+      applyLookupStatus(response.status || {});
+    } catch (err) {
+      console.error('[VLL SP] Failed to load lookup status:', err);
+      applyLookupStatus({});
+    }
+  }
+
+  async function loadSettings() {
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'GET_SETTINGS' });
+      const settings = response.settings || {};
+
+      if (settings.enabled !== undefined && settingsEls.enabled) {
+        settingsEls.enabled.checked = settings.enabled;
+      }
+      if (settings.targetLang && settingsEls.targetLang) {
+        settingsEls.targetLang.value = settings.targetLang;
+      }
+      if (settings.lookupProvider && settingsEls.lookupProvider) {
+        settingsEls.lookupProvider.value = settings.lookupProvider;
+      }
+      if (settings.showPinyin !== undefined && settingsEls.showPinyin) {
+        settingsEls.showPinyin.checked = settings.showPinyin;
+      }
+      if (settings.showTranslation !== undefined && settingsEls.showTranslation) {
+        settingsEls.showTranslation.checked = settings.showTranslation;
+      }
+      if (settings.autoPause !== undefined && settingsEls.autoPause) {
+        settingsEls.autoPause.checked = settings.autoPause;
+      }
+    } catch (err) {
+      console.error('[VLL SP] Failed to load settings:', err);
+    }
+  }
+
+  async function saveSettings() {
+    const settings = {
+      enabled: settingsEls.enabled ? settingsEls.enabled.checked : true,
+      targetLang: settingsEls.targetLang ? settingsEls.targetLang.value : 'pt',
+      lookupProvider: getLookupProviderValue(),
+      showPinyin: settingsEls.showPinyin ? settingsEls.showPinyin.checked : true,
+      showTranslation: settingsEls.showTranslation ? settingsEls.showTranslation.checked : true,
+      autoPause: settingsEls.autoPause ? settingsEls.autoPause.checked : false
+    };
+
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'SAVE_SETTINGS',
+        settings
+      });
+    } catch (err) {
+      console.error('[VLL SP] Failed to save settings:', err);
+    }
+  }
+
+  // Auto-save settings
+  [
+    settingsEls.enabled,
+    settingsEls.targetLang,
+    settingsEls.lookupProvider,
+    settingsEls.showPinyin,
+    settingsEls.showTranslation,
+    settingsEls.autoPause
+  ].forEach(el => {
+    if (el) el.addEventListener('change', saveSettings);
+  });
+
+  // Export to Anki from settings tab
+  $id('sp-btn-export').addEventListener('click', async () => {
+    const exportInfo = $id('sp-export-info');
+
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'EXPORT_CSV' });
+
+      if (response.count === 0) {
+        exportInfo.textContent = 'Nenhuma palavra para exportar.';
+        exportInfo.style.color = '#ffaa33';
+        exportInfo.style.display = 'block';
+        return;
+      }
+
+      const blob = new Blob([response.csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vll_anki_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      exportInfo.textContent = `✅ ${response.count} palavras exportadas!`;
+      exportInfo.style.color = '#44dd88';
+      exportInfo.style.display = 'block';
+
+      setTimeout(() => {
+        exportInfo.style.display = 'none';
+      }, 3000);
+    } catch (err) {
+      exportInfo.textContent = '❌ Erro ao exportar.';
+      exportInfo.style.color = '#ff4466';
+      exportInfo.style.display = 'block';
+      console.error('[VLL SP] Export error:', err);
+    }
   });
 
   /* ── Transcript ──────────────────────────────────────────── */
@@ -282,19 +434,26 @@
         colorsEl.querySelectorAll('.vll-color-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
-        await chrome.runtime.sendMessage({
-          type: 'SAVE_WORD',
-          entry: {
-            word: wordData.hanzi,
-            pinyin: wordData.pinyin,
-            meaning: wordData.meaning,
-            meaningPt: wordData.meaningPt,
-            color: color,
-            context: context || ''
-          }
-        });
-
+        // Optimistic UI update: reflect color immediately in transcript.
         wordData.color = color;
+        applyWordColorToTranscript(wordData.hanzi, color);
+
+        try {
+          await chrome.runtime.sendMessage({
+            type: 'SAVE_WORD',
+            entry: {
+              word: wordData.hanzi,
+              pinyin: wordData.pinyin,
+              meaning: wordData.meaning,
+              meaningPt: wordData.meaningPt,
+              color: color,
+              context: context || ''
+            }
+          });
+        } catch (err) {
+          console.error('[VLL SP] Failed to save word color:', err);
+        }
+
         loadVocabulary();
       });
 
@@ -312,10 +471,18 @@
   // Remove word
   $id('detail-remove').addEventListener('click', async () => {
     if (selectedWord) {
-      await chrome.runtime.sendMessage({
-        type: 'DELETE_WORD',
-        word: selectedWord.hanzi
-      });
+      // Optimistic UI update for immediate feedback.
+      applyWordColorToTranscript(selectedWord.hanzi, 'white');
+
+      try {
+        await chrome.runtime.sendMessage({
+          type: 'DELETE_WORD',
+          word: selectedWord.hanzi
+        });
+      } catch (err) {
+        console.error('[VLL SP] Failed to delete word:', err);
+      }
+
       wordDetail.style.display = 'none';
       loadVocabulary();
     }
@@ -338,13 +505,15 @@
       case 'WORD_COLOR_UPDATED':
         // Refresh vocabulary if on that tab
         if (activeTab === 'vocabulary') loadVocabulary();
-        // Update transcript words
-        const wordSpans = transcriptList.querySelectorAll('.vll-tw');
-        wordSpans.forEach(span => {
-          if (span.textContent === msg.word) {
-            span.setAttribute('data-color', msg.color);
-          }
-        });
+        applyWordColorToTranscript(msg.word, msg.color);
+        break;
+
+      case 'LOOKUP_STATUS_CHANGED':
+        applyLookupStatus(msg.status || {});
+        break;
+
+      case 'SETTINGS_CHANGED':
+        loadSettings();
         break;
     }
   });
@@ -357,8 +526,45 @@
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
 
+  function applyWordColorToTranscript(word, color) {
+    if (!word) return;
+
+    const normalize = (value) => (value || '').normalize('NFC').trim();
+    const normalizedTarget = normalize(word);
+    const finalColor = color === 'white' ? null : color;
+
+    // Update rendered transcript spans immediately.
+    const wordSpans = transcriptList.querySelectorAll('.vll-tw');
+    wordSpans.forEach(span => {
+      if (normalize(span.textContent) === normalizedTarget) {
+        if (finalColor) {
+          span.setAttribute('data-color', finalColor);
+        } else {
+          span.removeAttribute('data-color');
+        }
+      }
+    });
+
+    // Keep in-memory transcript data in sync for future re-renders.
+    subtitles.forEach(sub => {
+      if (!sub.words) return;
+      sub.words.forEach(w => {
+        if (normalize(w.hanzi) === normalizedTarget) {
+          w.color = finalColor;
+        }
+      });
+    });
+  }
+
   /* ── Init ────────────────────────────────────────────────── */
 
   loadTranscript();
   loadVocabulary();
+  loadSettings();
+  loadLookupStatus();
+
+  lookupStatusPollTimer = setInterval(loadLookupStatus, 2000);
+  window.addEventListener('beforeunload', () => {
+    if (lookupStatusPollTimer) clearInterval(lookupStatusPollTimer);
+  });
 })();

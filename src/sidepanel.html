@@ -28,6 +28,9 @@
       <span class="vll-tab-icon">📚</span> Vocabulário
       <span class="vll-tab-badge" id="vocab-count">0</span>
     </button>
+    <button class="vll-tab" data-tab="settings" id="tab-settings">
+      <span class="vll-tab-icon">⚙️</span> Config
+    </button>
   </nav>
 
   <!-- Transcript Panel -->
@@ -61,6 +64,72 @@
     <div class="vll-empty-state" id="vocab-empty">
       <div class="vll-empty-icon">📖</div>
       <p>Nenhuma palavra salva ainda. Passe o mouse sobre as legendas para começar!</p>
+    </div>
+  </section>
+
+  <!-- Settings Panel -->
+  <section class="vll-panel" id="panel-settings">
+    <div class="vll-settings-group">
+      <h3 class="vll-settings-title">Configurações</h3>
+
+      <div class="vll-setting-item">
+        <label class="vll-toggle-label" for="sp-toggle-enabled">
+          <span>Ativar Extensão</span>
+          <input type="checkbox" id="sp-toggle-enabled" checked>
+          <span class="vll-toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="vll-setting-item">
+        <label class="vll-setting-label" for="sp-lang-select">Idioma de tradução</label>
+        <select class="vll-setting-select" id="sp-lang-select">
+          <option value="pt">🇧🇷 Português</option>
+          <option value="en">🇺🇸 English</option>
+          <option value="es">🇪🇸 Español</option>
+        </select>
+      </div>
+
+      <div class="vll-setting-item" id="sp-lookup-loading-setting">
+        <label class="vll-setting-label">Fonte de definições</label>
+        <div class="vll-setting-note" id="sp-lookup-loading-note">Google carregando em segundo plano... usando dicionário local por enquanto.</div>
+      </div>
+
+      <div class="vll-setting-item" id="sp-lookup-provider-setting" style="display:none;">
+        <label class="vll-setting-label" for="sp-lookup-provider-select">Fonte de definições</label>
+        <select class="vll-setting-select" id="sp-lookup-provider-select">
+          <option value="dictionary">Dicionário offline (CC-CEDICT)</option>
+          <option value="google">Google Translate</option>
+        </select>
+      </div>
+
+      <div class="vll-setting-item">
+        <label class="vll-toggle-label" for="sp-toggle-pinyin">
+          <span>Mostrar Pinyin</span>
+          <input type="checkbox" id="sp-toggle-pinyin" checked>
+          <span class="vll-toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="vll-setting-item">
+        <label class="vll-toggle-label" for="sp-toggle-translation">
+          <span>Mostrar Tradução</span>
+          <input type="checkbox" id="sp-toggle-translation" checked>
+          <span class="vll-toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="vll-setting-item">
+        <label class="vll-toggle-label" for="sp-toggle-autopause">
+          <span>Pausa Automática</span>
+          <input type="checkbox" id="sp-toggle-autopause">
+          <span class="vll-toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="vll-setting-item vll-settings-actions">
+        <button class="vll-settings-btn vll-settings-btn-export" id="sp-btn-export">📥 Exportar para Anki (CSV)</button>
+        <div class="vll-setting-note" id="sp-export-info" style="display:none;"></div>
+      </div>
     </div>
   </section>
 

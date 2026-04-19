@@ -12,6 +12,10 @@
 
 const VLL_Subtitles = (() => {
 
+  // Cache sorted translation tracks by array reference to avoid re-sorting
+  // on every subtitle match.
+  const _translationTrackCache = new WeakMap();
+
   /**
    * Extract a complete JSON object from a string starting at a given position.
    * Uses bracket counting instead of regex to handle nested objects correctly.
@@ -511,15 +515,6 @@ const VLL_Subtitles = (() => {
       console.log(`[VLL] Loading ${targetLang} translation...`);
       ptTrack = await fetchTranslatedTrack(zhMeta.baseUrl, targetLang);
       console.log(`[VLL] Loaded ${ptTrack.length} translated entries`);
-
-      // If Chinese failed, try Portuguese track directly
-      if (zhTrack.length === 0) {
-        const ptMeta = findPortugueseTrack(tracks);
-        if (ptMeta) {
-          console.log(`[VLL] Trying Portuguese track as fallback...`);
-          ptTrack = await fetchSubtitleTrack(ptMeta.baseUrl, ptMeta.languageCode, ptMeta.name, ptMeta.vssId);
-        }
-      }
     } else {
       console.warn('[VLL] No Chinese track found. Available languages:',
         tracks.map(t => t.languageCode).join(', '));
@@ -531,10 +526,11 @@ const VLL_Subtitles = (() => {
       }
     }
 
-    // If no Chinese track, check if there's a Portuguese track directly
-    if (zhTrack.length === 0) {
+    // If translated track is still empty, try Portuguese track directly once.
+    if (ptTrack.length === 0) {
       const ptMeta = findPortugueseTrack(tracks);
       if (ptMeta) {
+        console.log('[VLL] Trying Portuguese track as fallback...');
         ptTrack = await fetchSubtitleTrack(ptMeta.baseUrl, ptMeta.languageCode, ptMeta.name, ptMeta.vssId);
       }
     }
@@ -545,6 +541,24 @@ const VLL_Subtitles = (() => {
       tracks,
       videoId: getVideoId()
     };
+  }
+
+  /**
+   * Prepare translation entries for fast nearest timestamp lookup.
+   */
+  function getPreparedTranslationTrack(ptTrack) {
+    if (!Array.isArray(ptTrack) || ptTrack.length === 0) return [];
+
+    const cached = _translationTrackCache.get(ptTrack);
+    if (cached) return cached;
+
+    const prepared = ptTrack
+      .filter(e => typeof e?.start === 'number' && typeof e?.text === 'string')
+      .slice()
+      .sort((a, b) => a.start - b.start);
+
+    _translationTrackCache.set(ptTrack, prepared);
+    return prepared;
   }
 
   /**
@@ -559,20 +573,42 @@ const VLL_Subtitles = (() => {
    * Match a translated line to a Chinese line by timestamp proximity.
    */
   function matchTranslation(zhEntry, ptTrack) {
-    if (!ptTrack || ptTrack.length === 0) return '';
+    if (!zhEntry || typeof zhEntry.start !== 'number') return '';
 
-    let best = null;
-    let bestDiff = Infinity;
+    const prepared = getPreparedTranslationTrack(ptTrack);
+    if (prepared.length === 0) return '';
 
-    for (const pt of ptTrack) {
-      const diff = Math.abs(pt.start - zhEntry.start);
+    // Lower-bound binary search for first translated line with start >= zh start.
+    let lo = 0;
+    let hi = prepared.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (prepared[mid].start < zhEntry.start) lo = mid + 1;
+      else hi = mid;
+    }
+
+    const candidates = [];
+    if (lo < prepared.length) candidates.push(prepared[lo]);
+    if (lo > 0) candidates.push(prepared[lo - 1]);
+
+    if (candidates.length === 0) return '';
+
+    let best = candidates[0];
+    let bestDiff = Math.abs(best.start - zhEntry.start);
+
+    for (let i = 1; i < candidates.length; i++) {
+      const diff = Math.abs(candidates[i].start - zhEntry.start);
       if (diff < bestDiff) {
+        best = candidates[i];
         bestDiff = diff;
-        best = pt;
       }
     }
 
-    return (best && bestDiff < 2.0) ? best.text : '';
+    // Adapt matching window slightly based on subtitle duration.
+    const duration = typeof zhEntry.duration === 'number' ? zhEntry.duration : 0;
+    const maxDiff = Math.max(1.0, Math.min(3.0, duration * 0.75 || 2.0));
+
+    return bestDiff <= maxDiff ? best.text : '';
   }
 
   // Public API
