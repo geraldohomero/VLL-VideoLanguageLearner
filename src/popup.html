@@ -17,6 +17,9 @@
       <span class="popup-logo-text">VLL</span>
       <span class="popup-logo-sub">Video Language Learner</span>
     </div>
+    <button class="popup-btn-sidepanel" id="btn-sidepanel" title="Abrir Painel Lateral">
+      📋
+    </button>
   </header>
 
   <!-- Stats Cards -->
@@ -101,13 +104,26 @@
 
   <!-- Actions -->
   <section class="popup-section">
-    <button class="popup-btn popup-btn-primary" id="btn-sidepanel">
-      📋 Abrir Painel Lateral
-    </button>
     <button class="popup-btn popup-btn-export" id="btn-export">
       📥 Exportar para Anki (CSV)
     </button>
     <div class="popup-export-info" id="export-info" style="display:none"></div>
+  </section>
+
+  <!-- Cross-Browser Data Transfer -->
+  <section class="popup-section">
+    <h3 class="popup-section-title">Transferência de Dados</h3>
+    <div class="popup-transfer-buttons">
+      <button class="popup-btn popup-btn-data-export" id="btn-data-export">
+        💾 Exportar Dados
+      </button>
+      <button class="popup-btn popup-btn-data-import" id="btn-data-import">
+        📂 Importar Dados
+      </button>
+    </div>
+    <input type="file" id="import-file-input" accept=".json" style="display:none">
+    <div class="popup-transfer-note">Transfira seu vocabulário entre navegadores (Chrome, Edge, Brave...)</div>
+    <div class="popup-export-info" id="data-transfer-info" style="display:none"></div>
   </section>
 
   <!-- Saved Words -->

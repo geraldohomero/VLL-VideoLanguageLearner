@@ -55,7 +55,10 @@
       document.querySelectorAll('.vll-panel').forEach(p => p.classList.remove('active'));
       $id(`panel-${tabName}`).classList.add('active');
 
-      if (tabName === 'vocabulary') loadVocabulary();
+      if (tabName === 'vocabulary') {
+        loadVocabulary();
+        loadStats();
+      }
       if (tabName === 'settings') {
         loadSettings();
         loadLookupStatus();
@@ -198,6 +201,84 @@
     }
   });
 
+  /* ── Cross-Browser Data Export ───────────────────────────── */
+
+  $id('sp-btn-data-export').addEventListener('click', async () => {
+    const transferInfo = $id('sp-data-transfer-info');
+
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'EXPORT_DATA' });
+
+      if (response.count === 0) {
+        transferInfo.textContent = 'Nenhum dado para exportar.';
+        transferInfo.style.color = '#ffaa33';
+        transferInfo.style.display = 'block';
+        return;
+      }
+
+      const blob = new Blob([response.data], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vll_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      transferInfo.textContent = `✅ ${response.count} palavras exportadas com sucesso!`;
+      transferInfo.style.color = '#44dd88';
+      transferInfo.style.display = 'block';
+
+      setTimeout(() => { transferInfo.style.display = 'none'; }, 3000);
+    } catch (err) {
+      transferInfo.textContent = '❌ Erro ao exportar dados.';
+      transferInfo.style.color = '#ff4466';
+      transferInfo.style.display = 'block';
+      console.error('[VLL SP] Data export error:', err);
+    }
+  });
+
+  /* ── Cross-Browser Data Import ───────────────────────────── */
+
+  $id('sp-btn-data-import').addEventListener('click', () => {
+    $id('sp-import-file-input').click();
+  });
+
+  $id('sp-import-file-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const transferInfo = $id('sp-data-transfer-info');
+
+    try {
+      const text = await file.text();
+      const response = await chrome.runtime.sendMessage({ type: 'IMPORT_DATA', data: text });
+
+      if (!response.ok) {
+        transferInfo.textContent = `❌ ${response.error}`;
+        transferInfo.style.color = '#ff4466';
+        transferInfo.style.display = 'block';
+        return;
+      }
+
+      transferInfo.textContent = `✅ ${response.importedCount} palavras importadas!`;
+      transferInfo.style.color = '#44dd88';
+      transferInfo.style.display = 'block';
+
+      // Refresh vocabulary list
+      loadVocabulary();
+
+      setTimeout(() => { transferInfo.style.display = 'none'; }, 3000);
+    } catch (err) {
+      transferInfo.textContent = '❌ Erro ao importar dados.';
+      transferInfo.style.color = '#ff4466';
+      transferInfo.style.display = 'block';
+      console.error('[VLL SP] Data import error:', err);
+    }
+
+    // Reset file input so the same file can be re-selected
+    e.target.value = '';
+  });
+
   /* ── Transcript ──────────────────────────────────────────── */
 
   async function loadTranscript() {
@@ -299,6 +380,21 @@
     const activeItem = transcriptList.querySelector('.vll-transcript-item.active');
     if (activeItem) {
       activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  /* ── Stats ────────────────────────────────────────────────── */
+
+  async function loadStats() {
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'GET_STATS' });
+      const stats = response.stats || {};
+      $id('sp-stat-total').textContent = stats.total || 0;
+      $id('sp-stat-red').textContent = stats.red || 0;
+      $id('sp-stat-orange').textContent = stats.orange || 0;
+      $id('sp-stat-green').textContent = stats.green || 0;
+    } catch (err) {
+      console.error('[VLL SP] Failed to load stats:', err);
     }
   }
 
@@ -503,8 +599,9 @@
         break;
 
       case 'WORD_COLOR_UPDATED':
-        // Refresh vocabulary if on that tab
+        // Refresh vocabulary and stats if on that tab
         if (activeTab === 'vocabulary') loadVocabulary();
+        loadStats();
         applyWordColorToTranscript(msg.word, msg.color);
         break;
 
@@ -560,6 +657,7 @@
 
   loadTranscript();
   loadVocabulary();
+  loadStats();
   loadSettings();
   loadLookupStatus();
 

@@ -336,6 +336,81 @@ async function handleMessage(msg, sender) {
       return { csv: csvContent, count: allWords.length };
     }
 
+    /* ── Cross-Browser Data Export/Import ─────────────────── */
+
+    case 'EXPORT_DATA': {
+      const exportWords = await vllGetAllWords();
+      const exportSettings = await chrome.storage.local.get(['vllSettings']);
+      const exportPayload = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        source: 'VLL — Video Language Learner',
+        words: exportWords,
+        settings: exportSettings.vllSettings || {}
+      };
+      return { data: JSON.stringify(exportPayload, null, 2), count: exportWords.length };
+    }
+
+    case 'IMPORT_DATA': {
+      try {
+        const importPayload = JSON.parse(msg.data);
+        if (!importPayload || importPayload.source !== 'VLL — Video Language Learner') {
+          return { ok: false, error: 'Arquivo inválido. Este não é um backup do VLL.' };
+        }
+
+        let importedCount = 0;
+        const importedWords = [];
+
+        // Import words
+        if (Array.isArray(importPayload.words)) {
+          for (const word of importPayload.words) {
+            if (word && word.word) {
+              await vllSaveWord(word);
+              importedWords.push({ word: word.word, color: word.color || 'red' });
+              importedCount++;
+            }
+          }
+        }
+
+        // Import settings (merge with existing)
+        if (importPayload.settings && typeof importPayload.settings === 'object') {
+          const existing = await chrome.storage.local.get(['vllSettings']);
+          const merged = { ...(existing.vllSettings || {}), ...importPayload.settings };
+          await chrome.storage.local.set({ vllSettings: merged });
+
+          // Broadcast settings change to all YouTube tabs
+          const tabs = await chrome.tabs.query({ url: '*://*.youtube.com/*' });
+          for (const tab of tabs) {
+            chrome.tabs.sendMessage(tab.id, {
+              type: 'SETTINGS_CHANGED',
+              settings: merged
+            }).catch(() => {});
+          }
+        }
+
+        // Broadcast color updates for all imported words to all tabs and extension pages
+        if (importedWords.length > 0) {
+          const ytTabs = await chrome.tabs.query({ url: '*://*.youtube.com/*' });
+
+          for (const { word, color } of importedWords) {
+            const payload = { type: 'WORD_COLOR_UPDATED', word, color };
+
+            // Notify all YouTube content scripts
+            for (const tab of ytTabs) {
+              chrome.tabs.sendMessage(tab.id, payload).catch(() => {});
+            }
+
+            // Notify extension pages (popup, side panel)
+            chrome.runtime.sendMessage(payload).catch(() => {});
+          }
+        }
+
+        return { ok: true, importedCount };
+      } catch (err) {
+        return { ok: false, error: 'Erro ao processar arquivo: ' + err.message };
+      }
+    }
+
     /* ── Settings ──────────────────────────────────────────── */
 
     case 'SAVE_SETTINGS': {

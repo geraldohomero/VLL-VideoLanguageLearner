@@ -245,6 +245,50 @@ body {
   font-style: italic;
 }
 
+/* ── Stats Cards ─────────────────────────────────────────── */
+
+.vll-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.vll-stat-card {
+  text-align: center;
+  padding: 12px 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: transform 0.2s ease;
+}
+
+.vll-stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.vll-stat-total { background: rgba(124, 108, 240, 0.08); }
+.vll-stat-red { background: rgba(255, 68, 102, 0.08); }
+.vll-stat-orange { background: rgba(255, 170, 51, 0.08); }
+.vll-stat-green { background: rgba(68, 221, 136, 0.08); }
+
+.vll-stat-number {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.vll-stat-total .vll-stat-number { color: #7c6cf0; }
+.vll-stat-red .vll-stat-number { color: #ff4466; }
+.vll-stat-orange .vll-stat-number { color: #ffaa33; }
+.vll-stat-green .vll-stat-number { color: #44dd88; }
+
+.vll-stat-label {
+  font-size: 10px;
+  color: #666680;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 /* ── Vocabulary ──────────────────────────────────────────── */
 
 .vll-vocab-filters {
@@ -644,5 +688,62 @@ body {
 }
 
 #sp-export-info {
+  margin-top: 8px;
+}
+
+/* ── Data Transfer ───────────────────────────────────────── */
+
+.vll-data-transfer-section {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.vll-settings-subtitle {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: #555570;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.vll-data-transfer-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.vll-settings-btn-data-export {
+  background: linear-gradient(135deg, rgba(124, 108, 240, 0.14), rgba(80, 60, 200, 0.08)) !important;
+  color: #a78bfa !important;
+  border-color: rgba(124, 108, 240, 0.18) !important;
+}
+
+.vll-settings-btn-data-export:hover {
+  background: linear-gradient(135deg, rgba(124, 108, 240, 0.24), rgba(80, 60, 200, 0.15)) !important;
+  border-color: rgba(124, 108, 240, 0.3) !important;
+}
+
+.vll-settings-btn-data-import {
+  background: linear-gradient(135deg, rgba(255, 170, 51, 0.14), rgba(220, 140, 30, 0.08)) !important;
+  color: #ffaa33 !important;
+  border-color: rgba(255, 170, 51, 0.18) !important;
+}
+
+.vll-settings-btn-data-import:hover {
+  background: linear-gradient(135deg, rgba(255, 170, 51, 0.24), rgba(220, 140, 30, 0.15)) !important;
+  border-color: rgba(255, 170, 51, 0.3) !important;
+}
+
+.vll-data-transfer-note {
+  font-size: 10px;
+  color: #555570;
+  text-align: center;
+  line-height: 1.4;
+}
+
+#sp-data-transfer-info {
   margin-top: 8px;
 }

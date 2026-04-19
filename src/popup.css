@@ -22,6 +22,31 @@ body {
   padding: 20px;
   background: linear-gradient(135deg, rgba(124, 108, 240, 0.15), rgba(80, 60, 180, 0.08));
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.popup-btn-sidepanel {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(124, 108, 240, 0.2);
+  background: linear-gradient(135deg, rgba(124, 108, 240, 0.15), rgba(100, 80, 200, 0.1));
+  color: #a78bfa;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.popup-btn-sidepanel:hover {
+  background: linear-gradient(135deg, rgba(124, 108, 240, 0.25), rgba(100, 80, 200, 0.2));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(124, 108, 240, 0.2);
 }
 
 .popup-logo {
@@ -262,6 +287,46 @@ body {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* ── Data Transfer ───────────────────────────────────────── */
+
+.popup-transfer-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.popup-btn-data-export {
+  background: linear-gradient(135deg, rgba(124, 108, 240, 0.12), rgba(80, 60, 200, 0.08));
+  color: #a78bfa;
+  border: 1px solid rgba(124, 108, 240, 0.15);
+}
+
+.popup-btn-data-export:hover {
+  background: linear-gradient(135deg, rgba(124, 108, 240, 0.22), rgba(80, 60, 200, 0.15));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(124, 108, 240, 0.15);
+}
+
+.popup-btn-data-import {
+  background: linear-gradient(135deg, rgba(255, 170, 51, 0.12), rgba(220, 140, 30, 0.08));
+  color: #ffaa33;
+  border: 1px solid rgba(255, 170, 51, 0.15);
+}
+
+.popup-btn-data-import:hover {
+  background: linear-gradient(135deg, rgba(255, 170, 51, 0.22), rgba(220, 140, 30, 0.15));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 170, 51, 0.15);
+}
+
+.popup-transfer-note {
+  font-size: 10px;
+  color: #555570;
+  text-align: center;
+  line-height: 1.4;
 }
 
 /* ── Footer ──────────────────────────────────────────────── */

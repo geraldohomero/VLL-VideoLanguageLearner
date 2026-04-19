@@ -44,6 +44,26 @@
 
   <!-- Vocabulary Panel -->
   <section class="vll-panel" id="panel-vocabulary">
+    <!-- Stats Cards -->
+    <div class="vll-stats" id="sp-stats">
+      <div class="vll-stat-card vll-stat-total">
+        <div class="vll-stat-number" id="sp-stat-total">0</div>
+        <div class="vll-stat-label">Total</div>
+      </div>
+      <div class="vll-stat-card vll-stat-red">
+        <div class="vll-stat-number" id="sp-stat-red">0</div>
+        <div class="vll-stat-label">Não sei</div>
+      </div>
+      <div class="vll-stat-card vll-stat-orange">
+        <div class="vll-stat-number" id="sp-stat-orange">0</div>
+        <div class="vll-stat-label">Incerta</div>
+      </div>
+      <div class="vll-stat-card vll-stat-green">
+        <div class="vll-stat-number" id="sp-stat-green">0</div>
+        <div class="vll-stat-label">Sei!</div>
+      </div>
+    </div>
+
     <!-- Filters -->
     <div class="vll-vocab-filters" id="vocab-filters">
       <button class="vll-filter active" data-filter="all">Todos</button>
@@ -129,6 +149,17 @@
       <div class="vll-setting-item vll-settings-actions">
         <button class="vll-settings-btn vll-settings-btn-export" id="sp-btn-export">📥 Exportar para Anki (CSV)</button>
         <div class="vll-setting-note" id="sp-export-info" style="display:none;"></div>
+      </div>
+
+      <div class="vll-setting-item vll-settings-actions vll-data-transfer-section">
+        <h4 class="vll-settings-subtitle">Transferência de Dados</h4>
+        <div class="vll-data-transfer-buttons">
+          <button class="vll-settings-btn vll-settings-btn-data-export" id="sp-btn-data-export">💾 Exportar Dados</button>
+          <button class="vll-settings-btn vll-settings-btn-data-import" id="sp-btn-data-import">📂 Importar Dados</button>
+        </div>
+        <input type="file" id="sp-import-file-input" accept=".json" style="display:none">
+        <div class="vll-data-transfer-note">Transfira seu vocabulário entre navegadores (Chrome, Edge, Brave...)</div>
+        <div class="vll-setting-note" id="sp-data-transfer-info" style="display:none;"></div>
       </div>
     </div>
   </section>

@@ -62,7 +62,7 @@ Ou
 5. Selecione a pasta raiz do projeto `VLL` no seu computador.
 6. Pronto! A extensão estará instalada. Fixe-a na barra de extensões para facilitar o acesso.
 
-![alt text](image-1.png)
+![alt text](assets/img/image-1-Install.png)
 
 ## Como Usar
 
@@ -83,6 +83,6 @@ Contribuições são muito bem-vindas! Se você encontrar algum problema ou tive
 
 ### To-do
 
-- [ ] Possibilidade de exportar e importar entre navegadores (Chrome, Edge, Brave...) 
-- [ ] Adicionar suporte a mais idiomas além do Chinês (Mandarim) (Inglês, Espanhol, Francês, Japonês, Coreano, etc...)
+- [x] Possibilidade de exportar e importar entre navegadores (Chrome, Edge, Brave...) 
+- [ ] Adicionar suporte a mais idiomas além do Chinês (Mandarim) (Inglês, Espanhol, Francês, Japonês, Coreano, etc...). Usuário escolhe seu idioma nativo e qual língua ele quer aprender.
 - [ ]  Escolha de Idioma da Extensão (Possibilitar ao usuário escolher qual sua língua nativa e qual ele quer aprender)

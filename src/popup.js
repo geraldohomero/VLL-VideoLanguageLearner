@@ -228,6 +228,85 @@
     }
   }
 
+  /* ── Cross-Browser Data Export ───────────────────────────── */
+
+  $id('btn-data-export').addEventListener('click', async () => {
+    const transferInfo = $id('data-transfer-info');
+
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'EXPORT_DATA' });
+
+      if (response.count === 0) {
+        transferInfo.textContent = 'Nenhum dado para exportar.';
+        transferInfo.style.color = '#ffaa33';
+        transferInfo.style.display = 'block';
+        return;
+      }
+
+      const blob = new Blob([response.data], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vll_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      transferInfo.textContent = `✅ ${response.count} palavras exportadas com sucesso!`;
+      transferInfo.style.color = '#44dd88';
+      transferInfo.style.display = 'block';
+
+      setTimeout(() => { transferInfo.style.display = 'none'; }, 3000);
+    } catch (err) {
+      transferInfo.textContent = '❌ Erro ao exportar dados.';
+      transferInfo.style.color = '#ff4466';
+      transferInfo.style.display = 'block';
+      console.error('[VLL Popup] Data export error:', err);
+    }
+  });
+
+  /* ── Cross-Browser Data Import ───────────────────────────── */
+
+  $id('btn-data-import').addEventListener('click', () => {
+    $id('import-file-input').click();
+  });
+
+  $id('import-file-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const transferInfo = $id('data-transfer-info');
+
+    try {
+      const text = await file.text();
+      const response = await chrome.runtime.sendMessage({ type: 'IMPORT_DATA', data: text });
+
+      if (!response.ok) {
+        transferInfo.textContent = `❌ ${response.error}`;
+        transferInfo.style.color = '#ff4466';
+        transferInfo.style.display = 'block';
+        return;
+      }
+
+      transferInfo.textContent = `✅ ${response.importedCount} palavras importadas!`;
+      transferInfo.style.color = '#44dd88';
+      transferInfo.style.display = 'block';
+
+      // Refresh data
+      loadStats();
+      loadVocabList();
+
+      setTimeout(() => { transferInfo.style.display = 'none'; }, 3000);
+    } catch (err) {
+      transferInfo.textContent = '❌ Erro ao importar dados.';
+      transferInfo.style.color = '#ff4466';
+      transferInfo.style.display = 'block';
+      console.error('[VLL Popup] Data import error:', err);
+    }
+
+    // Reset file input so the same file can be re-selected
+    e.target.value = '';
+  });
+
   /* ── Init ────────────────────────────────────────────────── */
 
   loadStats();
