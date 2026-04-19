@@ -42,7 +42,7 @@ Passo a passo:
 
 1. [Download do arquivo zip](https://github.com/geraldohomero/VLL-VideoLanguageLearner/releases) e extraia o conteúdo do arquivo zip para uma pasta no seu computador (por exemplo, `VLL`).
 
-2. bra o Google Chrome e acesse a página de extensões atravéÀ do endereço:
+2. Abra o Google Chrome e acesse a página de extensões atravéÀ do endereço:
 
 ```text
 chrome://extensions/
