@@ -47,17 +47,20 @@ A extensão aprimora a experiência de visualização adicionando legendas inter
 
 Como a extensão ainda está em desenvolvimento, você pode instalá-la manualmente no seu navegador:
 
+## 1)
+
 - [Download](https://github.com/geraldohomero/VLL-VideoLanguageLearner/releases)
 
 Ou
-
-1. Faça o clone deste repositório na sua máquina:
+Faça o clone deste repositório na sua máquina:
    ```bash
    git clone https://github.com/geraldohomero/VLL.git
    ```
    *(Ou faça o download do arquivo ZIP e extraia-o).*
 
-2. Abra o Google Chrome e acesse a página de extensões através do endereço:
+## 2)
+
+Abra o Google Chrome e acesse a página de extensões através do endereço:
    ```text
    chrome://extensions/
    ```
