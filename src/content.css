@@ -365,13 +365,18 @@
   to { transform: rotate(360deg); }
 }
 
-/* ── VLL Badge (bottom-right of player) ──────────────────── */
+/* ── VLL Controls (top-left of player) ──────────────────── */
 
-.vll-badge {
+.vll-controls {
   position: absolute;
   top: 16px;
   left: 16px;
   z-index: 9997;
+  display: flex;
+  gap: 8px;
+}
+
+.vll-badge {
   padding: 6px 12px;
   background: linear-gradient(135deg, rgba(124, 108, 240, 0.2), rgba(100, 80, 200, 0.1));
   backdrop-filter: blur(8px);

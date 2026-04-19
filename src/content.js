@@ -23,6 +23,7 @@
     ptMeanings: {}, // Cached Portuguese meanings
     ptTrack: [],    // Portuguese subtitle lines
     settings: {
+      enabled: true,
       showPinyin: true,
       showHanzi: true,
       showTranslation: true,
@@ -34,7 +35,7 @@
   let overlayEl = null;
   let tooltipEl = null;
   let tooltipTimeout = null;
-  let badgeEl = null;
+  let controlsEl = null;
   let loadingEl = null;
   let videoEl = null;
   let playerEl = null;
@@ -53,7 +54,12 @@
 
     // Load user settings
     loadSettings().then(() => {
-      waitForPlayer().then(startVLL);
+      waitForPlayer().then(() => {
+        createPermanentControls();
+        if (vllState.settings.enabled) {
+          startVLL();
+        }
+      });
     });
   }
 
@@ -136,7 +142,6 @@
       hideLoading();
       vllState.active = true;
       playerEl.classList.add('vll-active');
-      createBadge();
 
       // Step 5: Start syncing with video playback
       startSync();
@@ -220,17 +225,59 @@
     }
   }
 
-  function createBadge() {
-    if (badgeEl) return;
-    badgeEl = document.createElement('div');
-    badgeEl.className = 'vll-badge';
-    badgeEl.textContent = 'VLL ✦';
-    badgeEl.title = 'Video Language Learner — Ativo';
-    badgeEl.addEventListener('click', (e) => {
+  function createPermanentControls() {
+    if (controlsEl) return;
+    controlsEl = document.createElement('div');
+    controlsEl.className = 'vll-controls';
+
+    // Toggle button
+    const toggleBtn = document.createElement('div');
+    toggleBtn.className = 'vll-badge vll-toggle-btn';
+    updateToggleButton(toggleBtn);
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const newEnabled = !vllState.settings.enabled;
+      vllState.settings.enabled = newEnabled;
+      updateToggleButton(toggleBtn);
+      chrome.runtime.sendMessage({
+        type: 'SAVE_SETTINGS',
+        settings: vllState.settings
+      });
+      if (newEnabled) {
+        startVLL();
+      } else {
+        cleanup();
+      }
+    });
+
+    // Sidepanel button
+    const sidepanelBtn = document.createElement('div');
+    sidepanelBtn.className = 'vll-badge';
+    sidepanelBtn.textContent = 'VLL ✦';
+    sidepanelBtn.title = 'Video Language Learner — Painel';
+    sidepanelBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       chrome.runtime.sendMessage({ type: 'OPEN_SIDEPANEL' });
     });
-    playerEl.appendChild(badgeEl);
+
+    controlsEl.appendChild(sidepanelBtn);
+    controlsEl.appendChild(toggleBtn);
+
+    playerEl.appendChild(controlsEl);
+  }
+
+  function updateToggleButton(btn) {
+    if (vllState.settings.enabled) {
+      btn.textContent = 'Desativar';
+      btn.style.background = 'linear-gradient(135deg, rgba(255, 68, 102, 0.2), rgba(200, 50, 80, 0.1))';
+      btn.style.borderColor = 'rgba(255, 68, 102, 0.2)';
+      btn.style.color = 'var(--vll-red)';
+    } else {
+      btn.textContent = 'Ativar';
+      btn.style.background = 'linear-gradient(135deg, rgba(68, 221, 136, 0.2), rgba(50, 200, 100, 0.1))';
+      btn.style.borderColor = 'rgba(68, 221, 136, 0.2)';
+      btn.style.color = 'var(--vll-green)';
+    }
   }
 
   /* ── Render Subtitle ─────────────────────────────────────── */
@@ -592,7 +639,6 @@
     hideLoading();
 
     if (overlayEl) { overlayEl.remove(); overlayEl = null; }
-    if (badgeEl) { badgeEl.remove(); badgeEl = null; }
     if (playerEl) playerEl.classList.remove('vll-active');
 
     if (videoEl) {
@@ -619,13 +665,27 @@
         sendResponse({ ok: true });
         break;
 
-      case 'SETTINGS_CHANGED':
+      case 'SETTINGS_CHANGED': {
+        const wasEnabled = vllState.settings.enabled;
         vllState.settings = { ...vllState.settings, ...msg.settings };
-        if (vllState.currentIndex >= 0) {
+        
+        if (wasEnabled && !vllState.settings.enabled) {
+          cleanup();
+        } else if (!wasEnabled && vllState.settings.enabled) {
+          startVLL();
+        }
+        
+        if (controlsEl) {
+          const toggleBtn = controlsEl.querySelector('.vll-toggle-btn');
+          if (toggleBtn) updateToggleButton(toggleBtn);
+        }
+
+        if (vllState.settings.enabled && vllState.currentIndex >= 0) {
           renderSubtitle(vllState.subtitles[vllState.currentIndex]);
         }
         sendResponse({ ok: true });
         break;
+      }
 
       case 'WORD_COLOR_UPDATED':
         if (msg.word && msg.color) {

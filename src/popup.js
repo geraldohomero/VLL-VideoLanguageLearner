@@ -31,6 +31,9 @@
       const response = await chrome.runtime.sendMessage({ type: 'GET_SETTINGS' });
       const settings = response.settings || {};
 
+      if (settings.enabled !== undefined) {
+        $id('toggle-enabled').checked = settings.enabled;
+      }
       if (settings.targetLang) {
         $id('lang-select').value = settings.targetLang;
       }
@@ -52,6 +55,7 @@
 
   async function saveSettings() {
     const settings = {
+      enabled: $id('toggle-enabled').checked,
       targetLang: $id('lang-select').value,
       showPinyin: $id('toggle-pinyin').checked,
       showTranslation: $id('toggle-translation').checked,
@@ -69,6 +73,7 @@
   }
 
   // Auto-save on changes
+  $id('toggle-enabled').addEventListener('change', saveSettings);
   $id('lang-select').addEventListener('change', saveSettings);
   $id('toggle-pinyin').addEventListener('change', saveSettings);
   $id('toggle-translation').addEventListener('change', saveSettings);
