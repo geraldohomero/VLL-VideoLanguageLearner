@@ -51,23 +51,16 @@ A extensão aprimora a experiência de visualização adicionando legendas inter
 
 Como a extensão ainda está em desenvolvimento, você pode instalá-la manualmente no seu navegador:
 
-## 1)
+Passo a passo:
 
-- [Download](https://github.com/geraldohomero/VLL-VideoLanguageLearner/releases)
+1. [Download do arquivo zip](https://github.com/geraldohomero/VLL-VideoLanguageLearner/releases) e extraia o conteúdo do arquivo zip para uma pasta no seu computador (por exemplo, `VLL`).
 
-Ou
-Faça o clone deste repositório na sua máquina:
-   ```bash
-   git clone https://github.com/geraldohomero/VLL.git
-   ```
-   *(Ou faça o download do arquivo ZIP e extraia-o).*
+2. bra o Google Chrome e acesse a página de extensões atravéÀ do endereço:
 
-## 2)
+```text
+chrome://extensions/
+```
 
-Abra o Google Chrome e acesse a página de extensões através do endereço:
-   ```text
-   chrome://extensions/
-   ```
 3. Ative a opção **Modo do desenvolvedor** (chave no canto superior direito).
 4. Clique no botão **Carregar sem compactação** (ou *Load unpacked*).
 5. Selecione a pasta raiz do projeto `VLL` no seu computador.
@@ -77,7 +70,7 @@ Abra o Google Chrome e acesse a página de extensões através do endereço:
 
 ## Como Usar
 
-1. Acesse o **YouTube** e abra um vídeo que possua legendas em chinês.
+1. Acesse o **YouTube** e `abra um vídeo que possua legendas em chinês`.
 2. A extensão processará as legendas originais e renderizará automaticamente a interface multi-camadas (Hanzi, Pinyin e Tradução).
 3. **Passe o mouse** sobre os caracteres para abrir o dicionário pop-up.
 4. Clique no ícone da extensão para abrir o painel lateral e gerenciar suas palavras salvas e exportar o seu progresso para o Anki.
@@ -96,4 +89,4 @@ Contribuições são muito bem-vindas! Se você encontrar algum problema ou tive
 
 - [x] Possibilidade de exportar e importar entre navegadores (Chrome, Edge, Brave...) 
 - [ ] Adicionar suporte a mais idiomas além do Chinês (Mandarim) (Inglês, Espanhol, Francês, Japonês, Coreano, etc...). Usuário escolhe seu idioma nativo e qual língua ele quer aprender.
-- [ ]  Escolha de Idioma da Extensão (Possibilitar ao usuário escolher qual sua língua nativa e qual ele quer aprender)
+
