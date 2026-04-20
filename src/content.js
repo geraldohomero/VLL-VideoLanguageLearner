@@ -6,10 +6,40 @@
  * Depends on: subtitles.js (loaded before this in manifest)
  */
 
-/* global chrome, VLL_Subtitles */
+/* global chrome, VLL_Subtitles, VLL_MessagesShared, VLL_ConfigShared, VLL_VocabShared */
 
 (() => {
   'use strict';
+
+  const messagesShared = (typeof VLL_MessagesShared !== 'undefined' && VLL_MessagesShared)
+    ? VLL_MessagesShared
+    : null;
+
+  if (!messagesShared || !messagesShared.types) {
+    throw new Error('[VLL] Missing VLL_MessagesShared. Ensure messages.shared.js is loaded first.');
+  }
+
+  const MSG = messagesShared.types;
+
+  const configShared = (typeof VLL_ConfigShared !== 'undefined' && VLL_ConfigShared)
+    ? VLL_ConfigShared
+    : null;
+
+  if (!configShared || !configShared.lookupProviders || !configShared.storageKeys || !configShared.defaults) {
+    throw new Error('[VLL] Missing VLL_ConfigShared. Ensure config.shared.js is loaded first.');
+  }
+
+  const CFG = configShared;
+
+  const vocabShared = (typeof VLL_VocabShared !== 'undefined' && VLL_VocabShared)
+    ? VLL_VocabShared
+    : null;
+
+  if (!vocabShared || !Array.isArray(vocabShared.colors) || !vocabShared.labels) {
+    throw new Error('[VLL] Missing VLL_VocabShared. Ensure vocab.shared.js is loaded first.');
+  }
+
+  const VOCAB = vocabShared;
 
   /* ── State ───────────────────────────────────────────────── */
 
@@ -25,7 +55,7 @@
     lookupStatus: {
       inProgress: false,
       googleReady: false,
-      targetLang: 'pt',
+      targetLang: CFG.defaults.targetLang,
       lastError: ''
     },
     settings: {
@@ -33,8 +63,8 @@
       showPinyin: true,
       showHanzi: true,
       showTranslation: true,
-      targetLang: 'pt',
-      lookupProvider: 'dictionary',
+      targetLang: CFG.defaults.targetLang,
+      lookupProvider: CFG.lookupProviders.DICTIONARY,
       autoPause: false
     }
   };
@@ -46,6 +76,20 @@
   let loadingEl = null;
   let videoEl = null;
   let playerEl = null;
+  let vllStartupToken = 0;
+
+  function beginStartupRun() {
+    vllStartupToken += 1;
+    return vllStartupToken;
+  }
+
+  function cancelPendingStartup() {
+    vllStartupToken += 1;
+  }
+
+  function isStaleStartup(token) {
+    return token !== vllStartupToken;
+  }
 
   /* ── Initialization ──────────────────────────────────────── */
 
@@ -72,9 +116,9 @@
 
   async function loadSettings() {
     try {
-      const result = await chrome.storage.local.get(['vllSettings']);
-      if (result.vllSettings) {
-        vllState.settings = { ...vllState.settings, ...result.vllSettings };
+      const result = await chrome.storage.local.get([CFG.storageKeys.SETTINGS]);
+      if (result[CFG.storageKeys.SETTINGS]) {
+        vllState.settings = { ...vllState.settings, ...result[CFG.storageKeys.SETTINGS] };
       }
     } catch (e) { /* use defaults */ }
   }
@@ -101,15 +145,20 @@
    * Main startup: load subtitles, process with dictionary, start rendering.
    */
   async function startVLL() {
+    const startupToken = beginStartupRun();
     cleanup();
+    if (!vllState.settings.enabled) return;
+
     createOverlay();
     showLoading('Carregando legendas...');
 
     try {
       // Step 1: Load all subtitle data from YouTube
       const subData = await VLL_Subtitles.loadAllSubtitles(vllState.settings.targetLang);
+      if (isStaleStartup(startupToken)) return;
 
       if (subData.zhTrack.length === 0) {
+        if (isStaleStartup(startupToken)) return;
         showLoading('Sem legendas em chinês neste vídeo');
         setTimeout(() => hideLoading(), 3000);
         return;
@@ -124,17 +173,18 @@
 
       // Step 3: Send to service worker for dictionary lookup + color lookup
       const response = await chrome.runtime.sendMessage({
-        type: 'BATCH_LOOKUP',
+        type: MSG.BATCH_LOOKUP,
         words: uniqueWords,
-        provider: vllState.settings.lookupProvider || 'dictionary',
-        targetLang: vllState.settings.targetLang || 'pt'
+        provider: vllState.settings.lookupProvider || CFG.lookupProviders.DICTIONARY,
+        targetLang: vllState.settings.targetLang || CFG.defaults.targetLang
       });
+      if (isStaleStartup(startupToken)) return;
 
       // Start Google lookup preload in background without blocking startup.
       chrome.runtime.sendMessage({
-        type: 'PRELOAD_GOOGLE_LOOKUP',
+        type: MSG.PRELOAD_GOOGLE_LOOKUP,
         words: uniqueWords,
-        targetLang: vllState.settings.targetLang || 'pt'
+        targetLang: vllState.settings.targetLang || CFG.defaults.targetLang
       }).catch(() => {});
 
       vllState.dictData = response.dictData || {};
@@ -155,6 +205,7 @@
 
       console.log(`[VLL] Ready! ${vllState.subtitles.length} subtitles, ${Object.keys(vllState.dictData).length} dictionary hits`);
 
+      if (isStaleStartup(startupToken)) return;
       hideLoading();
       vllState.active = true;
       playerEl.classList.add('vll-active');
@@ -164,12 +215,13 @@
 
       // Notify side panel
       chrome.runtime.sendMessage({
-        type: 'SUBTITLES_READY',
+        type: MSG.SUBTITLES_READY,
         subtitles: vllState.subtitles,
         videoId: vllState.videoId
       }).catch(() => {});
 
     } catch (err) {
+      if (isStaleStartup(startupToken)) return;
       console.error('[VLL] Startup error:', err);
       showLoading('Erro ao carregar legendas');
       setTimeout(() => hideLoading(), 3000);
@@ -206,6 +258,44 @@
     }
 
     return result;
+  }
+
+  /**
+   * Refetches dictionary data (to get Google meanings after preload)
+   * and updates the existing subtitle objects without a full reload.
+   */
+  async function refreshMeanings() {
+    if (!vllState.active || vllState.subtitles.length === 0) return;
+
+    console.log('[VLL] Refreshing meanings from provider:', vllState.settings.lookupProvider);
+
+    try {
+      const allText = vllState.subtitles.map(s => s.text).join('\n');
+      const uniqueWords = getUniqueWords(allText);
+
+      const response = await chrome.runtime.sendMessage({
+        type: MSG.BATCH_LOOKUP,
+        words: uniqueWords,
+        provider: vllState.settings.lookupProvider || CFG.lookupProviders.DICTIONARY,
+        targetLang: vllState.settings.targetLang || CFG.defaults.targetLang
+      });
+
+      vllState.dictData = response.dictData || {};
+      
+      // Update existing subtitles
+      vllState.subtitles.forEach(sub => {
+        sub.words = segmentAndEnrich(sub.text);
+      });
+
+      // Force re-render of current subtitle
+      if (vllState.currentIndex >= 0) {
+        renderSubtitle(vllState.subtitles[vllState.currentIndex]);
+      }
+
+      console.log('[VLL] Meanings refreshed.');
+    } catch (err) {
+      console.warn('[VLL] Refresh meanings failed:', err);
+    }
   }
 
   /* ── DOM: Overlay ────────────────────────────────────────── */
@@ -268,7 +358,7 @@
     sidepanelBtn.title = 'Abrir/fechar painel lateral do VLL';
     sidepanelBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      chrome.runtime.sendMessage({ type: 'TOGGLE_SIDEPANEL' }).catch(() => {});
+      chrome.runtime.sendMessage({ type: MSG.TOGGLE_SIDEPANEL }).catch(() => {});
     });
 
     const toggleBtn = document.createElement('div');
@@ -281,13 +371,14 @@
       updateToggleButton(toggleBtn);
 
       chrome.runtime.sendMessage({
-        type: 'SAVE_SETTINGS',
+        type: MSG.SAVE_SETTINGS,
         settings: vllState.settings
       }).catch(() => {});
 
       if (newEnabled) {
         startVLL();
       } else {
+        cancelPendingStartup();
         cleanup();
       }
     });
@@ -430,24 +521,27 @@
     meaningEl.className = 'vll-tooltip-meaning';
     tooltipEl.appendChild(meaningEl);
 
+    const isGoogle = vllState.settings.lookupProvider === CFG.lookupProviders.GOOGLE;
+
     if (wordData.meaning) {
-      // Check if we have a cached PT meaning
+      // Check if we have a cached PT meaning or if the meaning is already in the target language (Google case)
       if (vllState.ptMeanings[wordData.hanzi]) {
         wordData.meaningPt = vllState.ptMeanings[wordData.hanzi];
         meaningEl.textContent = wordData.meaningPt;
-      } else if (wordData.meaningLang === 'pt') {
+      } else if (wordData.meaningLang === CFG.defaults.targetLang || (isGoogle && wordData.meaning)) {
+        // If it's Google, we assume the meaning returned is already in the targetLang (PT)
         wordData.meaningPt = wordData.meaning;
         vllState.ptMeanings[wordData.hanzi] = wordData.meaning;
         meaningEl.textContent = wordData.meaning;
       } else {
-        // Show English while translating
+        // Show English while translating (for local dictionary)
         meaningEl.textContent = `${wordData.meaning} (Traduzindo...)`;
         
         chrome.runtime.sendMessage({
-          type: 'TRANSLATE_TEXT',
+          type: MSG.TRANSLATE_TEXT,
           text: wordData.meaning,
           sourceLang: wordData.meaningLang || 'en',
-          targetLang: 'pt'
+          targetLang: CFG.defaults.targetLang
         }).then(res => {
           if (res && res.translatedText) {
             vllState.ptMeanings[wordData.hanzi] = res.translatedText;
@@ -482,16 +576,11 @@
     const colorBtns = document.createElement('div');
     colorBtns.className = 'vll-color-buttons';
 
-    ['red', 'orange', 'green', 'white'].forEach(color => {
+    VOCAB.colors.forEach(color => {
       const btn = document.createElement('button');
       btn.className = 'vll-color-btn';
       btn.setAttribute('data-color', color);
-      btn.title = {
-        red: 'Não sei',
-        orange: 'Não tenho certeza',
-        green: 'Sei!',
-        white: 'Não marcada'
-      }[color];
+      btn.title = VOCAB.labels[color] || color;
 
       if (wordData.color === color) btn.classList.add('active');
 
@@ -556,7 +645,7 @@
 
     try {
       await chrome.runtime.sendMessage({
-        type: 'SAVE_WORD',
+        type: MSG.SAVE_WORD,
         entry: {
           word: wordData.hanzi,
           pinyin: wordData.pinyin,
@@ -576,7 +665,7 @@
 
     try {
       await chrome.runtime.sendMessage({
-        type: 'DELETE_WORD',
+        type: MSG.DELETE_WORD,
         word: word
       });
     } catch (err) {
@@ -649,7 +738,7 @@
         renderSubtitle(vllState.subtitles[idx]);
         // Notify side panel of current position
         chrome.runtime.sendMessage({
-          type: 'SUBTITLE_CHANGED',
+          type: MSG.SUBTITLE_CHANGED,
           index: idx,
           time: time
         }).catch(() => {});
@@ -692,28 +781,29 @@
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     switch (msg.type) {
-      case 'GET_SUBTITLES':
+      case MSG.GET_SUBTITLES:
         sendResponse({ subtitles: vllState.subtitles, videoId: vllState.videoId });
         break;
 
-      case 'GET_CURRENT_INDEX':
+      case MSG.GET_CURRENT_INDEX:
         sendResponse({ index: vllState.currentIndex });
         break;
 
-      case 'SEEK_TO_SUBTITLE':
+      case MSG.SEEK_TO_SUBTITLE:
         if (videoEl && msg.index >= 0 && msg.index < vllState.subtitles.length) {
           videoEl.currentTime = vllState.subtitles[msg.index].start;
         }
         sendResponse({ ok: true });
         break;
 
-      case 'SETTINGS_CHANGED': {
+      case MSG.SETTINGS_CHANGED: {
         const wasEnabled = vllState.settings.enabled;
         const prevProvider = vllState.settings.lookupProvider;
         const prevTargetLang = vllState.settings.targetLang;
         vllState.settings = { ...vllState.settings, ...msg.settings };
         
         if (wasEnabled && !vllState.settings.enabled) {
+          cancelPendingStartup();
           cleanup();
         } else if (!wasEnabled && vllState.settings.enabled) {
           startVLL();
@@ -736,18 +826,35 @@
         break;
       }
 
-      case 'LOOKUP_STATUS_CHANGED':
+      case MSG.LOOKUP_STATUS_CHANGED: {
+        const wasReady = vllState.lookupStatus.googleReady;
         if (msg.status) vllState.lookupStatus = { ...vllState.lookupStatus, ...msg.status };
+        
+        // If Google just became ready and we are using it, refresh meanings
+        if (!wasReady && vllState.lookupStatus.googleReady && vllState.settings.lookupProvider === 'google') {
+          refreshMeanings();
+        }
         sendResponse({ ok: true });
         break;
+      }
 
-      case 'WORD_COLOR_UPDATED':
+      case MSG.WORD_COLOR_UPDATED:
         if (msg.word && msg.color) {
           vllState.wordColors[msg.word] = msg.color;
           updateWordColorInDOM(msg.word, msg.color);
         }
         sendResponse({ ok: true });
         break;
+
+      case MSG.WORD_COLORS_BULK_UPDATED: {
+        const colors = msg.colors || {};
+        for (const [word, color] of Object.entries(colors)) {
+          vllState.wordColors[word] = color;
+          updateWordColorInDOM(word, color);
+        }
+        sendResponse({ ok: true });
+        break;
+      }
     }
     return true; // Keep channel open for async
   });

@@ -2,18 +2,38 @@
  * VLL Popup Script — Settings, stats, and export
  */
 
-/* global chrome */
+/* global chrome, VLL_MessagesShared, VLL_ConfigShared */
 
 (() => {
   'use strict';
+
+  const messagesShared = (typeof VLL_MessagesShared !== 'undefined' && VLL_MessagesShared)
+    ? VLL_MessagesShared
+    : null;
+
+  if (!messagesShared || !messagesShared.types) {
+    throw new Error('[VLL] Missing VLL_MessagesShared. Ensure messages.shared.js is loaded first.');
+  }
+
+  const MSG = messagesShared.types;
+
+  const configShared = (typeof VLL_ConfigShared !== 'undefined' && VLL_ConfigShared)
+    ? VLL_ConfigShared
+    : null;
+
+  if (!configShared || !configShared.lookupProviders) {
+    throw new Error('[VLL] Missing VLL_ConfigShared. Ensure config.shared.js is loaded first.');
+  }
+
+  const CFG = configShared;
 
   const $id = (id) => document.getElementById(id);
   let lookupStatusPollTimer = null;
 
   function getLookupProviderValue() {
     const select = $id('lookup-provider-select');
-    if (!select) return 'dictionary';
-    return select.value || 'dictionary';
+    if (!select) return CFG.lookupProviders.DICTIONARY;
+    return select.value || CFG.lookupProviders.DICTIONARY;
   }
 
   function applyLookupStatus(status) {
@@ -45,7 +65,7 @@
 
   async function loadLookupStatus() {
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'GET_LOOKUP_STATUS' });
+      const response = await chrome.runtime.sendMessage({ type: MSG.GET_LOOKUP_STATUS });
       applyLookupStatus(response.status || {});
     } catch (err) {
       console.error('[VLL Popup] Failed to load lookup status:', err);
@@ -57,7 +77,7 @@
 
   async function loadStats() {
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'GET_STATS' });
+      const response = await chrome.runtime.sendMessage({ type: MSG.GET_STATS });
       const stats = response.stats || {};
       $id('stat-total').textContent = stats.total || 0;
       $id('stat-red').textContent = stats.red || 0;
@@ -72,7 +92,7 @@
 
   async function loadSettings() {
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'GET_SETTINGS' });
+      const response = await chrome.runtime.sendMessage({ type: MSG.GET_SETTINGS });
       const settings = response.settings || {};
 
       if (settings.enabled !== undefined) {
@@ -112,7 +132,7 @@
 
     try {
       await chrome.runtime.sendMessage({
-        type: 'SAVE_SETTINGS',
+        type: MSG.SAVE_SETTINGS,
         settings
       });
     } catch (err) {
@@ -129,8 +149,22 @@
   $id('toggle-autopause').addEventListener('change', saveSettings);
 
   chrome.runtime.onMessage.addListener((msg) => {
-    if (msg.type === 'LOOKUP_STATUS_CHANGED' && msg.status) {
+    if (msg.type === MSG.LOOKUP_STATUS_CHANGED && msg.status) {
       applyLookupStatus(msg.status);
+    } else if (msg.type === MSG.SETTINGS_CHANGED && msg.settings) {
+      const settings = msg.settings;
+      if (settings.enabled !== undefined) $id('toggle-enabled').checked = settings.enabled;
+      if (settings.targetLang) $id('lang-select').value = settings.targetLang;
+      if (settings.lookupProvider) $id('lookup-provider-select').value = settings.lookupProvider;
+      if (settings.showPinyin !== undefined) $id('toggle-pinyin').checked = settings.showPinyin;
+      if (settings.showTranslation !== undefined) $id('toggle-translation').checked = settings.showTranslation;
+      if (settings.autoPause !== undefined) $id('toggle-autopause').checked = settings.autoPause;
+    } else if (msg.type === MSG.WORD_COLORS_BULK_UPDATED) {
+      loadStats();
+      loadVocabList();
+    } else if (msg.type === MSG.WORD_COLOR_UPDATED) {
+      loadStats();
+      loadVocabList();
     }
   });
 
@@ -154,7 +188,7 @@
     const exportInfo = $id('export-info');
 
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'EXPORT_CSV' });
+      const response = await chrome.runtime.sendMessage({ type: MSG.EXPORT_CSV });
 
       if (response.count === 0) {
         exportInfo.textContent = 'Nenhuma palavra para exportar.';
@@ -189,7 +223,7 @@
 
   async function loadVocabList() {
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'GET_ALL_WORDS' });
+      const response = await chrome.runtime.sendMessage({ type: MSG.GET_ALL_WORDS });
       const listEl = $id('popup-vocab-list');
       
       if (!response.words || response.words.length === 0) {
@@ -234,7 +268,7 @@
     const transferInfo = $id('data-transfer-info');
 
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'EXPORT_DATA' });
+      const response = await chrome.runtime.sendMessage({ type: MSG.EXPORT_DATA });
 
       if (response.count === 0) {
         transferInfo.textContent = 'Nenhum dado para exportar.';
@@ -278,7 +312,7 @@
 
     try {
       const text = await file.text();
-      const response = await chrome.runtime.sendMessage({ type: 'IMPORT_DATA', data: text });
+      const response = await chrome.runtime.sendMessage({ type: MSG.IMPORT_DATA, data: text });
 
       if (!response.ok) {
         transferInfo.textContent = `❌ ${response.error}`;

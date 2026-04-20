@@ -2,10 +2,40 @@
  * VLL Side Panel Script — Transcript view + vocabulary management
  */
 
-/* global chrome */
+/* global chrome, VLL_MessagesShared, VLL_ConfigShared, VLL_VocabShared */
 
 (() => {
   'use strict';
+
+  const messagesShared = (typeof VLL_MessagesShared !== 'undefined' && VLL_MessagesShared)
+    ? VLL_MessagesShared
+    : null;
+
+  if (!messagesShared || !messagesShared.types) {
+    throw new Error('[VLL] Missing VLL_MessagesShared. Ensure messages.shared.js is loaded first.');
+  }
+
+  const MSG = messagesShared.types;
+
+  const configShared = (typeof VLL_ConfigShared !== 'undefined' && VLL_ConfigShared)
+    ? VLL_ConfigShared
+    : null;
+
+  if (!configShared || !configShared.lookupProviders) {
+    throw new Error('[VLL] Missing VLL_ConfigShared. Ensure config.shared.js is loaded first.');
+  }
+
+  const CFG = configShared;
+
+  const vocabShared = (typeof VLL_VocabShared !== 'undefined' && VLL_VocabShared)
+    ? VLL_VocabShared
+    : null;
+
+  if (!vocabShared || !Array.isArray(vocabShared.colors) || !vocabShared.labels) {
+    throw new Error('[VLL] Missing VLL_VocabShared. Ensure vocab.shared.js is loaded first.');
+  }
+
+  const VOCAB = vocabShared;
 
   /* ── State ───────────────────────────────────────────────── */
 
@@ -67,8 +97,8 @@
   });
 
   function getLookupProviderValue() {
-    if (!settingsEls.lookupProvider) return 'dictionary';
-    return settingsEls.lookupProvider.value || 'dictionary';
+    if (!settingsEls.lookupProvider) return CFG.lookupProviders.DICTIONARY;
+    return settingsEls.lookupProvider.value || CFG.lookupProviders.DICTIONARY;
   }
 
   function applyLookupStatus(status) {
@@ -96,7 +126,7 @@
 
   async function loadLookupStatus() {
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'GET_LOOKUP_STATUS' });
+      const response = await chrome.runtime.sendMessage({ type: MSG.GET_LOOKUP_STATUS });
       applyLookupStatus(response.status || {});
     } catch (err) {
       console.error('[VLL SP] Failed to load lookup status:', err);
@@ -106,7 +136,7 @@
 
   async function loadSettings() {
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'GET_SETTINGS' });
+      const response = await chrome.runtime.sendMessage({ type: MSG.GET_SETTINGS });
       const settings = response.settings || {};
 
       if (settings.enabled !== undefined && settingsEls.enabled) {
@@ -144,7 +174,7 @@
 
     try {
       await chrome.runtime.sendMessage({
-        type: 'SAVE_SETTINGS',
+        type: MSG.SAVE_SETTINGS,
         settings
       });
     } catch (err) {
@@ -169,7 +199,7 @@
     const exportInfo = $id('sp-export-info');
 
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'EXPORT_CSV' });
+      const response = await chrome.runtime.sendMessage({ type: MSG.EXPORT_CSV });
 
       if (response.count === 0) {
         exportInfo.textContent = 'Nenhuma palavra para exportar.';
@@ -207,7 +237,7 @@
     const transferInfo = $id('sp-data-transfer-info');
 
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'EXPORT_DATA' });
+      const response = await chrome.runtime.sendMessage({ type: MSG.EXPORT_DATA });
 
       if (response.count === 0) {
         transferInfo.textContent = 'Nenhum dado para exportar.';
@@ -251,7 +281,7 @@
 
     try {
       const text = await file.text();
-      const response = await chrome.runtime.sendMessage({ type: 'IMPORT_DATA', data: text });
+      const response = await chrome.runtime.sendMessage({ type: MSG.IMPORT_DATA, data: text });
 
       if (!response.ok) {
         transferInfo.textContent = `❌ ${response.error}`;
@@ -283,7 +313,7 @@
 
   async function loadTranscript() {
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'GET_SUBTITLES' });
+      const response = await chrome.runtime.sendMessage({ type: MSG.GET_SUBTITLES });
       if (response && response.subtitles && response.subtitles.length > 0) {
         subtitles = response.subtitles;
         renderTranscript();
@@ -360,7 +390,7 @@
       // Click to seek
       item.addEventListener('click', () => {
         chrome.runtime.sendMessage({
-          type: 'SEEK_TO_SUBTITLE',
+          type: MSG.SEEK_TO_SUBTITLE,
           index: index
         });
       });
@@ -387,7 +417,7 @@
 
   async function loadStats() {
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'GET_STATS' });
+      const response = await chrome.runtime.sendMessage({ type: MSG.GET_STATS });
       const stats = response.stats || {};
       $id('sp-stat-total').textContent = stats.total || 0;
       $id('sp-stat-red').textContent = stats.red || 0;
@@ -402,7 +432,7 @@
 
   async function loadVocabulary() {
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'GET_ALL_WORDS' });
+      const response = await chrome.runtime.sendMessage({ type: MSG.GET_ALL_WORDS });
       vocabulary = response.words || [];
       vocabCount.textContent = vocabulary.length;
       renderVocabulary();
@@ -520,10 +550,11 @@
     const colorsEl = $id('detail-colors');
     colorsEl.innerHTML = '';
 
-    ['red', 'orange', 'green', 'white'].forEach(color => {
+    VOCAB.colors.forEach(color => {
       const btn = document.createElement('button');
       btn.className = 'vll-color-btn';
       btn.setAttribute('data-color', color);
+      btn.title = VOCAB.labels[color] || color;
       if (wordData.color === color) btn.classList.add('active');
 
       btn.addEventListener('click', async () => {
@@ -536,7 +567,7 @@
 
         try {
           await chrome.runtime.sendMessage({
-            type: 'SAVE_WORD',
+            type: MSG.SAVE_WORD,
             entry: {
               word: wordData.hanzi,
               pinyin: wordData.pinyin,
@@ -572,7 +603,7 @@
 
       try {
         await chrome.runtime.sendMessage({
-          type: 'DELETE_WORD',
+          type: MSG.DELETE_WORD,
           word: selectedWord.hanzi
         });
       } catch (err) {
@@ -588,29 +619,42 @@
 
   chrome.runtime.onMessage.addListener((msg) => {
     switch (msg.type) {
-      case 'SUBTITLES_READY':
+      case MSG.SUBTITLES_READY:
         subtitles = msg.subtitles || [];
         renderTranscript();
         transcriptEmpty.style.display = 'none';
         break;
 
-      case 'SUBTITLE_CHANGED':
+      case MSG.SUBTITLE_CHANGED:
         highlightCurrentSubtitle(msg.index);
         break;
 
-      case 'WORD_COLOR_UPDATED':
+      case MSG.WORD_COLOR_UPDATED:
         // Refresh vocabulary and stats if on that tab
         if (activeTab === 'vocabulary') loadVocabulary();
         loadStats();
         applyWordColorToTranscript(msg.word, msg.color);
         break;
 
-      case 'LOOKUP_STATUS_CHANGED':
+      case MSG.WORD_COLORS_BULK_UPDATED: {
+        const colors = msg.colors || {};
+        for (const [word, color] of Object.entries(colors)) {
+          applyWordColorToTranscript(word, color);
+        }
+        if (activeTab === 'vocabulary') loadVocabulary();
+        loadStats();
+        break;
+      }
+
+      case MSG.LOOKUP_STATUS_CHANGED:
         applyLookupStatus(msg.status || {});
         break;
 
-      case 'SETTINGS_CHANGED':
+      case MSG.SETTINGS_CHANGED:
         loadSettings();
+        // Refresh transcript and vocabulary to reflect provider/lang changes
+        loadTranscript();
+        if (activeTab === 'vocabulary') loadVocabulary();
         break;
     }
   });

@@ -8,13 +8,83 @@
  * 3. Extract from ytcfg embedded data
  */
 
-/* global chrome */
+/* global chrome, VLL_SubtitlesShared, VLL_NetworkShared, VLL_ConfigShared */
 
 const VLL_Subtitles = (() => {
 
-  // Cache sorted translation tracks by array reference to avoid re-sorting
-  // on every subtitle match.
-  const _translationTrackCache = new WeakMap();
+  const shared = (typeof VLL_SubtitlesShared !== 'undefined' && VLL_SubtitlesShared)
+    ? VLL_SubtitlesShared
+    : null;
+
+  if (!shared) {
+    throw new Error('[VLL] Missing VLL_SubtitlesShared. Ensure subtitles.shared.js is loaded first.');
+  }
+
+  const networkShared = (typeof VLL_NetworkShared !== 'undefined' && VLL_NetworkShared)
+    ? VLL_NetworkShared
+    : null;
+
+  if (!networkShared) {
+    throw new Error('[VLL] Missing VLL_NetworkShared. Ensure network.shared.js is loaded first.');
+  }
+
+  const configShared = (typeof VLL_ConfigShared !== 'undefined' && VLL_ConfigShared)
+    ? VLL_ConfigShared
+    : null;
+
+  if (!configShared || !configShared.defaults) {
+    throw new Error('[VLL] Missing VLL_ConfigShared. Ensure config.shared.js is loaded first.');
+  }
+
+  const CFG = configShared;
+
+  const VLL_SUBTITLE_TIMEOUT_MS = 9000;
+  const VLL_SUBTITLE_RETRIES = 1;
+  const VLL_SUBTITLE_BACKOFF_MS = 300;
+
+  function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function fetchWithTimeout(url, options = {}, timeoutMs = VLL_SUBTITLE_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  async function fetchWithRetry(url, options = {}, config = {}) {
+    const retries = Number.isInteger(config.retries) ? config.retries : VLL_SUBTITLE_RETRIES;
+    const timeoutMs = Number.isInteger(config.timeoutMs) ? config.timeoutMs : VLL_SUBTITLE_TIMEOUT_MS;
+    const backoffMs = Number.isInteger(config.backoffMs) ? config.backoffMs : VLL_SUBTITLE_BACKOFF_MS;
+
+    let lastErr = null;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetchWithTimeout(url, options, timeoutMs);
+        if (!response.ok) {
+          if (!networkShared.shouldRetryHttpStatus(response.status) || attempt === retries) {
+            return response;
+          }
+          await delay(networkShared.getRetryDelay(attempt, backoffMs));
+          continue;
+        }
+        return response;
+      } catch (err) {
+        lastErr = err;
+        if (!networkShared.shouldRetryNetworkError(err) || attempt === retries) {
+          throw err;
+        }
+        await delay(networkShared.getRetryDelay(attempt, backoffMs));
+      }
+    }
+
+    throw lastErr || new Error('Fetch failed');
+  }
 
   /**
    * Extract a complete JSON object from a string starting at a given position.
@@ -148,7 +218,7 @@ const VLL_Subtitles = (() => {
     // validation which returns 0 bytes if missing. The Android client bypasses this.
     console.log('[VLL] Strategy 1: Fetching via InnerTube API (Android bypass)...');
     try {
-      const response = await fetch('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
+      const response = await fetchWithRetry('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -163,6 +233,10 @@ const VLL_Subtitles = (() => {
           },
           videoId: videoId
         })
+      }, {
+        retries: VLL_SUBTITLE_RETRIES,
+        timeoutMs: VLL_SUBTITLE_TIMEOUT_MS,
+        backoffMs: VLL_SUBTITLE_BACKOFF_MS
       });
       
       if (response.ok) {
@@ -198,8 +272,12 @@ const VLL_Subtitles = (() => {
     // Strategy 3: Fetch page HTML directly (handles SPA navigation fallback)
     console.log('[VLL] Strategy 3: Fetching page HTML...');
     try {
-      const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+      const response = await fetchWithRetry(`https://www.youtube.com/watch?v=${videoId}`, {
         credentials: 'same-origin'
+      }, {
+        retries: VLL_SUBTITLE_RETRIES,
+        timeoutMs: VLL_SUBTITLE_TIMEOUT_MS,
+        backoffMs: VLL_SUBTITLE_BACKOFF_MS
       });
       const html = await response.text();
       const tracks = extractTracksFromHTML(html);
@@ -343,27 +421,7 @@ const VLL_Subtitles = (() => {
     // URLSearchParams will URL-encode the commas in YouTube's 'sparams' query
     // parameter (e.g. sparams=ip,ipbits -> sparams=ip%2Cipbits). This completely
     // invalidates the YouTube URL signature and causes the API to return 0 bytes.
-    let url = baseUrl;
-    
-    // Ensure lang is set
-    if (langCode && !url.includes('&lang=') && !url.includes('?lang=')) {
-      url += '&lang=' + encodeURIComponent(langCode);
-    }
-    // Ensure name is set for manual tracks if missing
-    if (trackName && !url.includes('&name=') && !url.includes('?name=') && !url.includes('&kind=asr')) {
-      url += '&name=' + encodeURIComponent(trackName);
-    }
-    // Ensure vss_id is set
-    if (vssId && !url.includes('&vss_id=') && !url.includes('?vss_id=')) {
-      url += '&vss_id=' + encodeURIComponent(vssId);
-    }
-    // Set format if specified
-    if (fmt) {
-      // Remove any existing fmt parameter
-      url = url.replace(/&fmt=[^&]*/g, '').replace(/\?fmt=[^&]*&/, '?');
-      url += '&fmt=' + encodeURIComponent(fmt);
-    }
-    return url;
+    return shared.buildSubtitleUrl(baseUrl, langCode, trackName, vssId, fmt);
   }
 
   /**
@@ -397,7 +455,11 @@ const VLL_Subtitles = (() => {
       console.log(`[VLL] Attempt ${i + 1}/${uniqueUrls.length}: ${fetchUrl.substring(0, 120)}...`);
 
       try {
-        const response = await fetch(fetchUrl);
+        const response = await fetchWithRetry(fetchUrl, {}, {
+          retries: VLL_SUBTITLE_RETRIES,
+          timeoutMs: VLL_SUBTITLE_TIMEOUT_MS,
+          backoffMs: VLL_SUBTITLE_BACKOFF_MS
+        });
         if (!response.ok) {
           console.warn(`[VLL] HTTP ${response.status}`);
           continue;
@@ -449,7 +511,11 @@ const VLL_Subtitles = (() => {
         url += '&tlang=' + encodeURIComponent(targetLang);
       }
 
-      const response = await fetch(url);
+      const response = await fetchWithRetry(url, {}, {
+        retries: VLL_SUBTITLE_RETRIES,
+        timeoutMs: VLL_SUBTITLE_TIMEOUT_MS,
+        backoffMs: VLL_SUBTITLE_BACKOFF_MS
+      });
       if (!response.ok) return [];
 
       const text = await response.text();
@@ -468,7 +534,11 @@ const VLL_Subtitles = (() => {
 
       // Try JSON3 format explicitly
       let url2 = url.replace(/&fmt=[^&]*/g, '').replace(/\?fmt=[^&]*&/, '?') + '&fmt=json3';
-      const response2 = await fetch(url2);
+      const response2 = await fetchWithRetry(url2, {}, {
+        retries: VLL_SUBTITLE_RETRIES,
+        timeoutMs: VLL_SUBTITLE_TIMEOUT_MS,
+        backoffMs: VLL_SUBTITLE_BACKOFF_MS
+      });
       if (response2.ok) {
         const text2 = await response2.text();
         const data2 = safeJSONParse(text2);
@@ -489,7 +559,7 @@ const VLL_Subtitles = (() => {
    * Main entry: load all subtitle data for the current video.
    * Pre-loads EVERYTHING before video plays.
    */
-  async function loadAllSubtitles(targetLang = 'pt') {
+  async function loadAllSubtitles(targetLang = CFG.defaults.targetLang) {
     console.log('[VLL] === Starting subtitle loading ===');
     const tracks = await extractCaptionTracks();
 
@@ -544,24 +614,6 @@ const VLL_Subtitles = (() => {
   }
 
   /**
-   * Prepare translation entries for fast nearest timestamp lookup.
-   */
-  function getPreparedTranslationTrack(ptTrack) {
-    if (!Array.isArray(ptTrack) || ptTrack.length === 0) return [];
-
-    const cached = _translationTrackCache.get(ptTrack);
-    if (cached) return cached;
-
-    const prepared = ptTrack
-      .filter(e => typeof e?.start === 'number' && typeof e?.text === 'string')
-      .slice()
-      .sort((a, b) => a.start - b.start);
-
-    _translationTrackCache.set(ptTrack, prepared);
-    return prepared;
-  }
-
-  /**
    * Get the current YouTube video ID.
    */
   function getVideoId() {
@@ -573,42 +625,7 @@ const VLL_Subtitles = (() => {
    * Match a translated line to a Chinese line by timestamp proximity.
    */
   function matchTranslation(zhEntry, ptTrack) {
-    if (!zhEntry || typeof zhEntry.start !== 'number') return '';
-
-    const prepared = getPreparedTranslationTrack(ptTrack);
-    if (prepared.length === 0) return '';
-
-    // Lower-bound binary search for first translated line with start >= zh start.
-    let lo = 0;
-    let hi = prepared.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (prepared[mid].start < zhEntry.start) lo = mid + 1;
-      else hi = mid;
-    }
-
-    const candidates = [];
-    if (lo < prepared.length) candidates.push(prepared[lo]);
-    if (lo > 0) candidates.push(prepared[lo - 1]);
-
-    if (candidates.length === 0) return '';
-
-    let best = candidates[0];
-    let bestDiff = Math.abs(best.start - zhEntry.start);
-
-    for (let i = 1; i < candidates.length; i++) {
-      const diff = Math.abs(candidates[i].start - zhEntry.start);
-      if (diff < bestDiff) {
-        best = candidates[i];
-        bestDiff = diff;
-      }
-    }
-
-    // Adapt matching window slightly based on subtitle duration.
-    const duration = typeof zhEntry.duration === 'number' ? zhEntry.duration : 0;
-    const maxDiff = Math.max(1.0, Math.min(3.0, duration * 0.75 || 2.0));
-
-    return bestDiff <= maxDiff ? best.text : '';
+    return shared.matchTranslation(zhEntry, ptTrack);
   }
 
   // Public API

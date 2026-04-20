@@ -29,37 +29,6 @@ function vllOpenDB() {
   });
 }
 
-/* ── Helper: run a transaction ───────────────────────────── */
-
-async function vllTransaction(mode, callback) {
-  const db = await vllOpenDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(VLL_STORE_WORDS, mode);
-    const store = tx.objectStore(VLL_STORE_WORDS);
-    const result = callback(store);
-
-    tx.oncomplete = () => {
-      db.close();
-      resolve(result._value);
-    };
-    tx.onerror = () => {
-      db.close();
-      reject(tx.error);
-    };
-
-    // If callback returned a request, resolve with its result
-    if (result instanceof IDBRequest) {
-      result.onsuccess = () => { result._value = result.result; };
-      result.onerror = () => reject(result.error);
-    } else if (result && typeof result.then === 'function') {
-      // promise-like
-      result.then(v => { result._value = v; }).catch(reject);
-    } else {
-      result._value = result;
-    }
-  });
-}
-
 /* ── CRUD Operations ─────────────────────────────────────── */
 
 async function vllSaveWord(entry) {
@@ -82,6 +51,43 @@ async function vllSaveWord(entry) {
     const req = store.put(record);
     req.onsuccess = () => { db.close(); resolve(record); };
     req.onerror = () => { db.close(); reject(req.error); };
+  });
+}
+
+async function vllSaveWordsBatch(entries) {
+  const safeEntries = Array.isArray(entries) ? entries.filter(e => e && e.word) : [];
+  if (safeEntries.length === 0) return [];
+
+  const db = await vllOpenDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(VLL_STORE_WORDS, 'readwrite');
+    const store = tx.objectStore(VLL_STORE_WORDS);
+    const records = [];
+
+    tx.oncomplete = () => {
+      db.close();
+      resolve(records);
+    };
+
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error || new Error('Batch save failed'));
+    };
+
+    for (const entry of safeEntries) {
+      const record = {
+        word: entry.word,
+        pinyin: entry.pinyin || '',
+        meaning: entry.meaning || '',
+        meaningPt: entry.meaningPt || '',
+        color: entry.color || 'red',
+        dateAdded: entry.dateAdded || new Date().toISOString(),
+        lastSeen: new Date().toISOString(),
+        context: entry.context || ''
+      };
+      records.push(record);
+      store.put(record);
+    }
   });
 }
 

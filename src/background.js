@@ -5,12 +5,14 @@
  * Manifest V3 — no ES modules, uses importScripts().
  */
 
-importScripts('database.js', 'dictionary.js', 'export.js');
+importScripts('messages.shared.js', 'config.shared.js', 'network.shared.js', 'database.js', 'dictionary.js', 'export.js');
 
 const VLL_GOOGLE_LOOKUP_CONCURRENCY = 6;
-const VLL_LOOKUP_PROVIDER_DICTIONARY = 'dictionary';
-const VLL_LOOKUP_PROVIDER_GOOGLE = 'google';
+const VLL_TRANSLATE_TIMEOUT_MS = 7000;
+const VLL_TRANSLATE_RETRIES = 2;
+const VLL_TRANSLATE_BACKOFF_MS = 300;
 const _vllSidepanelOpenTabs = new Set();
+let _vllSettingsMutationQueue = Promise.resolve();
 
 const _vllGoogleLookupState = {
   inProgress: false,
@@ -20,6 +22,82 @@ const _vllGoogleLookupState = {
   loadedWords: new Set(),
   lastError: ''
 };
+
+const vllNetworkShared = (typeof VLL_NetworkShared !== 'undefined' && VLL_NetworkShared)
+  ? VLL_NetworkShared
+  : null;
+
+if (!vllNetworkShared) {
+  throw new Error('[VLL] Missing VLL_NetworkShared. Ensure network.shared.js is loaded first.');
+}
+
+const vllMessagesShared = (typeof VLL_MessagesShared !== 'undefined' && VLL_MessagesShared)
+  ? VLL_MessagesShared
+  : null;
+
+if (!vllMessagesShared || !vllMessagesShared.types) {
+  throw new Error('[VLL] Missing VLL_MessagesShared. Ensure messages.shared.js is loaded first.');
+}
+
+const MSG = vllMessagesShared.types;
+
+const vllConfigShared = (typeof VLL_ConfigShared !== 'undefined' && VLL_ConfigShared)
+  ? VLL_ConfigShared
+  : null;
+
+if (!vllConfigShared || !vllConfigShared.lookupProviders || !vllConfigShared.storageKeys || !vllConfigShared.defaults) {
+  throw new Error('[VLL] Missing VLL_ConfigShared. Ensure config.shared.js is loaded first.');
+}
+
+const CFG = vllConfigShared;
+
+_vllGoogleLookupState.targetLang = CFG.defaults.targetLang;
+
+function vllDelay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function vllFetchWithTimeout(url, options = {}, timeoutMs = VLL_TRANSLATE_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function vllFetchWithRetry(url, options = {}, config = {}) {
+  const retries = Number.isInteger(config.retries) ? config.retries : VLL_TRANSLATE_RETRIES;
+  const timeoutMs = Number.isInteger(config.timeoutMs) ? config.timeoutMs : VLL_TRANSLATE_TIMEOUT_MS;
+  const backoffMs = Number.isInteger(config.backoffMs) ? config.backoffMs : VLL_TRANSLATE_BACKOFF_MS;
+
+  let lastErr = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await vllFetchWithTimeout(url, options, timeoutMs);
+      if (!response.ok) {
+        const retriable = vllNetworkShared.shouldRetryHttpStatus(response.status);
+        if (!retriable || attempt === retries) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        await vllDelay(vllNetworkShared.getRetryDelay(attempt, backoffMs));
+        continue;
+      }
+      return response;
+    } catch (err) {
+      lastErr = err;
+      const retriable = vllNetworkShared.shouldRetryNetworkError(err);
+      if (!retriable || attempt === retries) {
+        throw err;
+      }
+      await vllDelay(vllNetworkShared.getRetryDelay(attempt, backoffMs));
+    }
+  }
+
+  throw lastErr || new Error('Fetch failed');
+}
 
 function vllParseGoogleTranslationResponse(data) {
   const chunks = Array.isArray(data?.[0]) ? data[0] : [];
@@ -38,14 +116,17 @@ function vllParseGoogleTranslationResponse(data) {
   return { translatedText, romanizedText };
 }
 
-async function vllTranslateWithGoogle(text, sourceLang = 'auto', targetLang = 'pt') {
+async function vllTranslateWithGoogle(text, sourceLang = 'auto', targetLang = CFG.defaults.targetLang) {
   if (!text || !text.trim()) {
     return { translatedText: '', romanizedText: '' };
   }
 
   const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sourceLang)}&tl=${encodeURIComponent(targetLang)}&dt=t&dt=rm&q=${encodeURIComponent(text)}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Translate HTTP ${res.status}`);
+  const res = await vllFetchWithRetry(url, {}, {
+    retries: VLL_TRANSLATE_RETRIES,
+    timeoutMs: VLL_TRANSLATE_TIMEOUT_MS,
+    backoffMs: VLL_TRANSLATE_BACKOFF_MS
+  });
 
   const data = await res.json();
   if (!Array.isArray(data) || !Array.isArray(data[0])) {
@@ -82,7 +163,7 @@ async function vllBatchLookupWithGoogle(words, targetLang = 'pt') {
   return dictData;
 }
 
-function vllResetGoogleLookupState(targetLang = 'pt') {
+function vllResetGoogleLookupState(targetLang = CFG.defaults.targetLang) {
   _vllGoogleLookupState.inProgress = false;
   _vllGoogleLookupState.ready = false;
   _vllGoogleLookupState.targetLang = targetLang;
@@ -103,22 +184,23 @@ function vllGetLookupStatus() {
 async function vllNotifyLookupStatusChanged() {
   const status = vllGetLookupStatus();
   try {
-    await chrome.runtime.sendMessage({ type: 'LOOKUP_STATUS_CHANGED', status });
-  } catch {
-    // No listeners (normal when popup/content is closed).
-  }
-
-  try {
     const tabs = await chrome.tabs.query({ url: '*://*.youtube.com/*' });
     for (const tab of tabs) {
-      chrome.tabs.sendMessage(tab.id, { type: 'LOOKUP_STATUS_CHANGED', status }).catch(() => {});
+      chrome.tabs.sendMessage(tab.id, { type: MSG.LOOKUP_STATUS_CHANGED, status }).catch(() => {});
     }
   } catch {
-    // Ignore tab query/send failures.
+    // Ignore tab query failures.
+  }
+
+  // Also broadcast to extension pages (side panel, popup)
+  try {
+    await chrome.runtime.sendMessage({ type: MSG.LOOKUP_STATUS_CHANGED, status });
+  } catch {
+    // No extension pages open.
   }
 }
 
-async function vllPreloadGoogleLookup(words, targetLang = 'pt') {
+async function vllPreloadGoogleLookup(words, targetLang = CFG.defaults.targetLang) {
   const requestedWords = (words || []).filter(Boolean);
   if (requestedWords.length === 0) {
     if (!_vllGoogleLookupState.ready) {
@@ -173,11 +255,11 @@ async function vllPreloadGoogleLookup(words, targetLang = 'pt') {
   };
 }
 
-async function vllGetLookupDataForProvider(words, provider, targetLang = 'pt') {
+async function vllGetLookupDataForProvider(words, provider, targetLang = CFG.defaults.targetLang) {
   const safeWords = (words || []).filter(Boolean);
-  const selectedProvider = provider || VLL_LOOKUP_PROVIDER_DICTIONARY;
+  const selectedProvider = provider || CFG.lookupProviders.DICTIONARY;
 
-  if (selectedProvider === VLL_LOOKUP_PROVIDER_GOOGLE) {
+  if (selectedProvider === CFG.lookupProviders.GOOGLE) {
     // Non-blocking behavior: use whatever is already cached from Google,
     // then fall back to local dictionary for missing words while preload runs.
     const dictData = Object.create(null);
@@ -212,7 +294,7 @@ async function vllGetLookupDataForProvider(words, provider, targetLang = 'pt') {
 
 async function vllBroadcastWordColorUpdate(tabId, word, color) {
   const payload = {
-    type: 'WORD_COLOR_UPDATED',
+    type: MSG.WORD_COLOR_UPDATED,
     word,
     color
   };
@@ -228,6 +310,63 @@ async function vllBroadcastWordColorUpdate(tabId, word, color) {
   } catch {
     // No listeners currently open.
   }
+}
+
+async function vllBroadcastWordColorsBulk(colorMap) {
+  const payload = {
+    type: MSG.WORD_COLORS_BULK_UPDATED,
+    colors: colorMap || {}
+  };
+
+  try {
+    const ytTabs = await chrome.tabs.query({ url: '*://*.youtube.com/*' });
+    for (const tab of ytTabs) {
+      chrome.tabs.sendMessage(tab.id, payload).catch(() => {});
+    }
+  } catch {
+    // Ignore tab query failures.
+  }
+
+  try {
+    await chrome.runtime.sendMessage(payload);
+  } catch {
+    // No extension pages currently open.
+  }
+}
+
+function vllRunSettingsMutation(task) {
+  const run = _vllSettingsMutationQueue.then(() => task());
+  _vllSettingsMutationQueue = run.catch(() => {});
+  return run;
+}
+
+async function vllBroadcastSettingsChanged(settings) {
+  const tabs = await chrome.tabs.query({ url: '*://*.youtube.com/*' });
+  for (const tab of tabs) {
+    chrome.tabs.sendMessage(tab.id, {
+      type: MSG.SETTINGS_CHANGED,
+      settings
+    }).catch(() => {});
+  }
+
+  chrome.runtime.sendMessage({
+    type: MSG.SETTINGS_CHANGED,
+    settings
+  }).catch(() => {});
+}
+
+async function vllPersistMergedSettings(partialSettings) {
+  const existing = await chrome.storage.local.get([CFG.storageKeys.SETTINGS]);
+  const merged = { ...(existing[CFG.storageKeys.SETTINGS] || {}), ...(partialSettings || {}) };
+  await chrome.storage.local.set({ [CFG.storageKeys.SETTINGS]: merged });
+
+  if (merged.targetLang && merged.targetLang !== _vllGoogleLookupState.targetLang) {
+    vllResetGoogleLookupState(merged.targetLang);
+    await vllNotifyLookupStatusChanged();
+  }
+
+  await vllBroadcastSettingsChanged(merged);
+  return merged;
 }
 
 /* ── Startup ───────────────────────────────────────────────── */
@@ -260,9 +399,9 @@ async function handleMessage(msg, sender) {
 
     /* ── Dictionary Operations ─────────────────────────────── */
 
-    case 'BATCH_LOOKUP': {
-      const targetLang = msg.targetLang || 'pt';
-      const provider = msg.provider || VLL_LOOKUP_PROVIDER_DICTIONARY;
+    case MSG.BATCH_LOOKUP: {
+      const targetLang = msg.targetLang || CFG.defaults.targetLang;
+      const provider = msg.provider || CFG.lookupProviders.DICTIONARY;
       const dictData = await vllGetLookupDataForProvider(msg.words || [], provider, targetLang);
 
       // Also get saved colors from IndexedDB
@@ -271,17 +410,17 @@ async function handleMessage(msg, sender) {
       return { dictData, colorData, status: vllGetLookupStatus() };
     }
 
-    case 'PRELOAD_GOOGLE_LOOKUP': {
-      const targetLang = msg.targetLang || 'pt';
+    case MSG.PRELOAD_GOOGLE_LOOKUP: {
+      const targetLang = msg.targetLang || CFG.defaults.targetLang;
       const result = await vllPreloadGoogleLookup(msg.words || [], targetLang);
       return result;
     }
 
-    case 'GET_LOOKUP_STATUS': {
+    case MSG.GET_LOOKUP_STATUS: {
       return { status: vllGetLookupStatus() };
     }
 
-    case 'LOOKUP_WORD': {
+    case MSG.LOOKUP_WORD: {
       await vllLoadDictionary();
       const entry = vllLookupWord(msg.word);
       const saved = await vllGetWord(msg.word);
@@ -291,7 +430,7 @@ async function handleMessage(msg, sender) {
       };
     }
 
-    case 'PROCESS_LINE': {
+    case MSG.PROCESS_LINE: {
       await vllLoadDictionary();
       const processed = vllProcessLine(msg.text);
       return { words: processed };
@@ -299,37 +438,37 @@ async function handleMessage(msg, sender) {
 
     /* ── Database Operations ───────────────────────────────── */
 
-    case 'SAVE_WORD': {
+    case MSG.SAVE_WORD: {
       const result = await vllSaveWord(msg.entry);
       await vllBroadcastWordColorUpdate(sender.tab?.id, msg.entry.word, msg.entry.color);
       return { ok: true, entry: result };
     }
 
-    case 'UPDATE_COLOR': {
+    case MSG.UPDATE_COLOR: {
       const result = await vllUpdateColor(msg.word, msg.color);
       await vllBroadcastWordColorUpdate(sender.tab?.id, msg.word, msg.color);
       return { ok: true, entry: result };
     }
 
-    case 'DELETE_WORD': {
+    case MSG.DELETE_WORD: {
       await vllDeleteWord(msg.word);
       await vllBroadcastWordColorUpdate(sender.tab?.id, msg.word, 'white');
       return { ok: true };
     }
 
-    case 'GET_ALL_WORDS': {
+    case MSG.GET_ALL_WORDS: {
       const words = await vllGetAllWords();
       return { words };
     }
 
-    case 'GET_WORDS_BY_COLOR': {
+    case MSG.GET_WORDS_BY_COLOR: {
       const words = await vllGetWordsByColor(msg.color);
       return { words };
     }
 
     /* ── Export ─────────────────────────────────────────────── */
 
-    case 'EXPORT_CSV': {
+    case MSG.EXPORT_CSV: {
       const allWords = await vllGetAllWords();
       const csvContent = vllGenerateCSV(allWords);
       // Return the CSV content — the popup will handle the download
@@ -338,74 +477,52 @@ async function handleMessage(msg, sender) {
 
     /* ── Cross-Browser Data Export/Import ─────────────────── */
 
-    case 'EXPORT_DATA': {
+    case MSG.EXPORT_DATA: {
       const exportWords = await vllGetAllWords();
-      const exportSettings = await chrome.storage.local.get(['vllSettings']);
+      const exportSettings = await chrome.storage.local.get([CFG.storageKeys.SETTINGS]);
       const exportPayload = {
         version: 1,
         exportedAt: new Date().toISOString(),
         source: 'VLL — Video Language Learner',
         words: exportWords,
-        settings: exportSettings.vllSettings || {}
+        settings: exportSettings[CFG.storageKeys.SETTINGS] || {}
       };
       return { data: JSON.stringify(exportPayload, null, 2), count: exportWords.length };
     }
 
-    case 'IMPORT_DATA': {
+    case MSG.IMPORT_DATA: {
       try {
         const importPayload = JSON.parse(msg.data);
         if (!importPayload || importPayload.source !== 'VLL — Video Language Learner') {
           return { ok: false, error: 'Arquivo inválido. Este não é um backup do VLL.' };
         }
+        return await vllRunSettingsMutation(async () => {
+          let importedCount = 0;
+          const importedColorMap = {};
 
-        let importedCount = 0;
-        const importedWords = [];
+          // Import words
+          if (Array.isArray(importPayload.words)) {
+            const wordsToImport = importPayload.words.filter(word => word && word.word);
+            const savedWords = await vllSaveWordsBatch(wordsToImport);
+            importedCount = savedWords.length;
 
-        // Import words
-        if (Array.isArray(importPayload.words)) {
-          for (const word of importPayload.words) {
-            if (word && word.word) {
-              await vllSaveWord(word);
-              importedWords.push({ word: word.word, color: word.color || 'red' });
-              importedCount++;
+            for (const word of savedWords) {
+              importedColorMap[word.word] = word.color || 'red';
             }
           }
-        }
 
-        // Import settings (merge with existing)
-        if (importPayload.settings && typeof importPayload.settings === 'object') {
-          const existing = await chrome.storage.local.get(['vllSettings']);
-          const merged = { ...(existing.vllSettings || {}), ...importPayload.settings };
-          await chrome.storage.local.set({ vllSettings: merged });
-
-          // Broadcast settings change to all YouTube tabs
-          const tabs = await chrome.tabs.query({ url: '*://*.youtube.com/*' });
-          for (const tab of tabs) {
-            chrome.tabs.sendMessage(tab.id, {
-              type: 'SETTINGS_CHANGED',
-              settings: merged
-            }).catch(() => {});
+          // Import settings (merge with existing)
+          if (importPayload.settings && typeof importPayload.settings === 'object') {
+            await vllPersistMergedSettings(importPayload.settings);
           }
-        }
 
-        // Broadcast color updates for all imported words to all tabs and extension pages
-        if (importedWords.length > 0) {
-          const ytTabs = await chrome.tabs.query({ url: '*://*.youtube.com/*' });
-
-          for (const { word, color } of importedWords) {
-            const payload = { type: 'WORD_COLOR_UPDATED', word, color };
-
-            // Notify all YouTube content scripts
-            for (const tab of ytTabs) {
-              chrome.tabs.sendMessage(tab.id, payload).catch(() => {});
-            }
-
-            // Notify extension pages (popup, side panel)
-            chrome.runtime.sendMessage(payload).catch(() => {});
+          // Broadcast all imported colors in one message for better performance on large imports
+          if (Object.keys(importedColorMap).length > 0) {
+            await vllBroadcastWordColorsBulk(importedColorMap);
           }
-        }
 
-        return { ok: true, importedCount };
+          return { ok: true, importedCount };
+        });
       } catch (err) {
         return { ok: false, error: 'Erro ao processar arquivo: ' + err.message };
       }
@@ -413,37 +530,23 @@ async function handleMessage(msg, sender) {
 
     /* ── Settings ──────────────────────────────────────────── */
 
-    case 'SAVE_SETTINGS': {
-      const existing = await chrome.storage.local.get(['vllSettings']);
-      const merged = { ...(existing.vllSettings || {}), ...(msg.settings || {}) };
-      await chrome.storage.local.set({ vllSettings: merged });
-
-      if (msg.settings && msg.settings.targetLang && msg.settings.targetLang !== _vllGoogleLookupState.targetLang) {
-        vllResetGoogleLookupState(msg.settings.targetLang);
-        await vllNotifyLookupStatusChanged();
-      }
-
-      // Notify active YouTube tab
-      const tabs = await chrome.tabs.query({ url: '*://*.youtube.com/*', active: true });
-      for (const tab of tabs) {
-        chrome.tabs.sendMessage(tab.id, {
-          type: 'SETTINGS_CHANGED',
-          settings: merged
-        }).catch(() => {});
-      }
+    case MSG.SAVE_SETTINGS: {
+      await vllRunSettingsMutation(async () => {
+        await vllPersistMergedSettings(msg.settings || {});
+      });
       return { ok: true };
     }
 
-    case 'GET_SETTINGS': {
-      const result = await chrome.storage.local.get(['vllSettings']);
-      return { settings: result.vllSettings || {} };
+    case MSG.GET_SETTINGS: {
+      const result = await chrome.storage.local.get([CFG.storageKeys.SETTINGS]);
+      return { settings: result[CFG.storageKeys.SETTINGS] || {} };
     }
 
     /* ── Translation ───────────────────────────────────────── */
 
-    case 'TRANSLATE_TEXT': {
+    case MSG.TRANSLATE_TEXT: {
       try {
-        const result = await vllTranslateWithGoogle(msg.text, msg.sourceLang || 'en', msg.targetLang || 'pt');
+        const result = await vllTranslateWithGoogle(msg.text, msg.sourceLang || 'en', msg.targetLang || CFG.defaults.targetLang);
         return {
           translatedText: result.translatedText,
           romanizedText: result.romanizedText
@@ -456,7 +559,7 @@ async function handleMessage(msg, sender) {
 
     /* ── Side Panel ────────────────────────────────────────── */
 
-    case 'OPEN_SIDEPANEL': {
+    case MSG.OPEN_SIDEPANEL: {
       if (sender.tab) {
         chrome.sidePanel.setOptions({
           tabId: sender.tab.id,
@@ -469,7 +572,7 @@ async function handleMessage(msg, sender) {
       return { ok: true };
     }
 
-    case 'TOGGLE_SIDEPANEL': {
+    case MSG.TOGGLE_SIDEPANEL: {
       if (!sender.tab) return { ok: false };
 
       const tabId = sender.tab.id;
@@ -491,12 +594,12 @@ async function handleMessage(msg, sender) {
       return { ok: true, open: true };
     }
 
-    case 'GET_SUBTITLES': {
+    case MSG.GET_SUBTITLES: {
       // Forward to the content script of the active tab
       const tabs = await chrome.tabs.query({ url: '*://*.youtube.com/*', active: true, currentWindow: true });
       if (tabs.length > 0) {
         try {
-          const response = await chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_SUBTITLES' });
+          const response = await chrome.tabs.sendMessage(tabs[0].id, { type: MSG.GET_SUBTITLES });
           return response;
         } catch {
           return { subtitles: [], videoId: '' };
@@ -505,11 +608,11 @@ async function handleMessage(msg, sender) {
       return { subtitles: [], videoId: '' };
     }
 
-    case 'SEEK_TO_SUBTITLE': {
+    case MSG.SEEK_TO_SUBTITLE: {
       const tabs = await chrome.tabs.query({ url: '*://*.youtube.com/*', active: true, currentWindow: true });
       if (tabs.length > 0) {
         chrome.tabs.sendMessage(tabs[0].id, {
-          type: 'SEEK_TO_SUBTITLE',
+          type: MSG.SEEK_TO_SUBTITLE,
           index: msg.index
         }).catch(() => {});
       }
@@ -517,15 +620,15 @@ async function handleMessage(msg, sender) {
     }
 
     // Forward subtitle change events to side panel
-    case 'SUBTITLE_CHANGED':
-    case 'SUBTITLES_READY': {
+    case MSG.SUBTITLE_CHANGED:
+    case MSG.SUBTITLES_READY: {
       // These are forwarded automatically via runtime messaging
       return { ok: true };
     }
 
     /* ── Stats ─────────────────────────────────────────────── */
 
-    case 'GET_STATS': {
+    case MSG.GET_STATS: {
       const all = await vllGetAllWords();
       const stats = {
         total: all.length,
