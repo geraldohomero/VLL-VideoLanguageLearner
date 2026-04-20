@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Language Learner (VLL) | Aprenda Mandarim no YouTube</title>
+    <meta name="description"
+        content="A extensão VLL adiciona legendas interativas multi-camadas no YouTube, permitindo que você aprenda Mandarim com Hanzi, Pinyin e integrações com o Anki.">
+    <link rel="stylesheet" href="site/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="icons/icon.png" type="image/png">
+</head>
+
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <header class="hero">
+        <div class="hero-content">
+            <div class="logo-wrapper">
+                <img src="icons/icon.png" alt="VLL Logo" class="hero-logo"
+                    onerror="this.src='https://via.placeholder.com/128?text=VLL'">
+            </div>
+            <h1 class="hero-title">Video Language Learner</h1>
+            <p class="hero-subtitle">Transforme seu tempo no YouTube em sessões de aprendizado de Mandarim.</p>
+            <div class="hero-actions">
+                <a href="https://github.com/geraldohomero/VLL-VideoLanguageLearner/releases" class="btn btn-primary"
+                    target="_blank" rel="noopener noreferrer">
+                    <span class="btn-text">Baixar Extensão</span>
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                </a>
+                <a href="https://github.com/geraldohomero/VLL-VideoLanguageLearner" class="btn btn-secondary"
+                    target="_blank" rel="noopener noreferrer">Ver no GitHub</a>
+            </div>
+        </div>
+
+        <div class="hero-showcase glass">
+            <img src="assets/img/Image1.png" alt="VLL Showcase"
+                onerror="this.src='https://via.placeholder.com/800x450?text=VLL+Interface'">
+        </div>
+    </header>
+
+    <main>
+        <section class="features-section">
+            <h2 class="section-title">Recursos Principais</h2>
+
+            <div class="features-grid">
+                <div class="feature-card glass hover-effect">
+                    <div class="feature-img-wrapper">
+                        <img src="assets/img/image03.png" alt="Aba de Legendas"
+                            onerror="this.src='https://via.placeholder.com/400x200?text=Legendas'">
+                    </div>
+                    <div class="feature-content">
+                        <h3>Legendas Interativas</h3>
+                        <p>Acompanhe simultaneamente os caracteres originais (Hanzi), Pinyin e tradução perfeitamente
+                            sincronizados.</p>
+                    </div>
+                </div>
+
+                <div class="feature-card glass hover-effect">
+                    <div class="feature-img-wrapper">
+                        <img src="assets/img/image02.png" alt="Aba de Vocabulário"
+                            onerror="this.src='https://via.placeholder.com/400x200?text=Vocabulario'">
+                    </div>
+                    <div class="feature-content">
+                        <h3>Gerenciamento de Vocabulário</h3>
+                        <p>Dicionário offline com traduções instantâneas. Salve palavras e exporte para o Anki com
+                            apenas um clique.</p>
+                    </div>
+                </div>
+
+                <div class="feature-card glass hover-effect">
+                    <div class="feature-img-wrapper">
+                        <img src="assets/img/image01.png" alt="Aba de Configurações"
+                            onerror="this.src='https://via.placeholder.com/400x200?text=Configuracoes'">
+                    </div>
+                    <div class="feature-content">
+                        <h3>Configurações Personalizadas</h3>
+                        <p>Ajuste facilmente as cores do seu nível de aprendizado e o comportamento da interface de
+                            acordo com suas preferências.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="how-it-works glass">
+            <h2 class="section-title">Como Começar</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <p>Baixe o arquivo ZIP da versão mais recente nas releases do GitHub.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <p>No Chrome, acesse <code>chrome://extensions</code> e ative o <strong>Modo do
+                            Desenvolvedor</strong>.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <p>Clique em <strong>Carregar sem compactação</strong> e selecione a pasta da extensão.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <p>Abra qualquer vídeo no YouTube com legendas em chinês e comece a aprender!</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Video Language Learner é um projeto de código aberto.</p>
+    </footer>
+
+    <script src="site/script.js"></script>
+</body>
+
+</html>
