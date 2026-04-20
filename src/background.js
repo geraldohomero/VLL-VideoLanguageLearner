@@ -281,7 +281,7 @@ async function vllGetLookupDataForProvider(words, provider, targetLang = CFG.def
       await vllLoadDictionary();
       const fallback = vllBatchLookup(missingWords);
       for (const [word, data] of Object.entries(fallback)) {
-        dictData[word] = data;
+        dictData[word] = { ...data, meaningLang: 'en' };
       }
     }
 
@@ -289,7 +289,12 @@ async function vllGetLookupDataForProvider(words, provider, targetLang = CFG.def
   }
 
   await vllLoadDictionary();
-  return vllBatchLookup(safeWords);
+  const dict = vllBatchLookup(safeWords);
+  // Mark dictionary results as English
+  for (const word in dict) {
+    dict[word].meaningLang = 'en';
+  }
+  return dict;
 }
 
 async function vllBroadcastWordColorUpdate(tabId, word, color) {

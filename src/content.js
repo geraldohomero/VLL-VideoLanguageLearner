@@ -528,7 +528,7 @@
       if (vllState.ptMeanings[wordData.hanzi]) {
         wordData.meaningPt = vllState.ptMeanings[wordData.hanzi];
         meaningEl.textContent = wordData.meaningPt;
-      } else if (wordData.meaningLang === CFG.defaults.targetLang || (isGoogle && wordData.meaning)) {
+      } else if (wordData.meaningLang === vllState.settings.targetLang) {
         // If it's Google, we assume the meaning returned is already in the targetLang (PT)
         wordData.meaningPt = wordData.meaning;
         vllState.ptMeanings[wordData.hanzi] = wordData.meaning;
