@@ -162,7 +162,8 @@ body {
     font-size: clamp(1.1rem, 2vw, 1.3rem);
     color: var(--text-secondary);
     max-width: 600px;
-    margin-bottom: 40px;
+    margin: 0 auto 40px auto;
+    text-align: center;
     animation: fadeIn 1s ease-out 0.4s both;
 }
 
