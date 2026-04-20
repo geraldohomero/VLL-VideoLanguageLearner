@@ -246,7 +246,12 @@
     if (!playerEl) return;
 
     if (controlsEl) {
-      if (!playerEl.contains(controlsEl)) {
+      const timeDisplay = playerEl.querySelector('.ytp-time-display');
+      if (timeDisplay && timeDisplay.parentNode) {
+        if (controlsEl.parentNode !== timeDisplay.parentNode || controlsEl.previousSibling !== timeDisplay) {
+          timeDisplay.parentNode.insertBefore(controlsEl, timeDisplay.nextSibling);
+        }
+      } else if (!playerEl.contains(controlsEl)) {
         playerEl.appendChild(controlsEl);
       }
       const toggleBtn = controlsEl.querySelector('.vll-toggle-btn');
@@ -289,7 +294,13 @@
 
     controlsEl.appendChild(sidepanelBtn);
     controlsEl.appendChild(toggleBtn);
-    playerEl.appendChild(controlsEl);
+    
+    const timeDisplay = playerEl.querySelector('.ytp-time-display');
+    if (timeDisplay && timeDisplay.parentNode) {
+      timeDisplay.parentNode.insertBefore(controlsEl, timeDisplay.nextSibling);
+    } else {
+      playerEl.appendChild(controlsEl);
+    }
   }
 
   function updateToggleButton(btn) {

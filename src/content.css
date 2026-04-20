@@ -365,36 +365,49 @@
   to { transform: rotate(360deg); }
 }
 
-/* ── VLL Controls (top-left of player) ──────────────────── */
+/* ── VLL Controls (bottom of player, next to time) ──────── */
 
 .vll-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
+  vertical-align: top;
+  height: 100%;
+}
+
+/* Fallback if controls are appended directly to the player */
+.html5-video-player > .vll-controls {
   position: absolute;
   top: 16px;
   left: 16px;
   z-index: 9997;
-  display: flex;
-  gap: 8px;
+  height: auto;
 }
 
 .vll-badge {
-  padding: 6px 12px;
-  background: linear-gradient(135deg, rgba(124, 108, 240, 0.2), rgba(100, 80, 200, 0.1));
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(124, 108, 240, 0.2);
-  border-radius: 20px;
-  color: var(--vll-accent);
-  font-family: var(--vll-font-latin);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px; 
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'YouTube Noto', Roboto, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all var(--vll-transition);
+  transition: all 0.15s ease;
   user-select: none;
+  height: max-content; /* Prevent vertical stretching */
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .vll-badge:hover {
-  background: linear-gradient(135deg, rgba(124, 108, 240, 0.35), rgba(100, 80, 200, 0.2));
-  transform: scale(1.05);
+  filter: brightness(1.2);
 }
 
 /* ── Hide native YouTube captions when VLL is active ─────── */
