@@ -100,4 +100,4 @@ Contribuições são muito bem-vindas! Se você encontrar algum problema ou tive
 - [ ] Adicionar suporte a mais idiomas além do Chinês (Mandarim) (Inglês, Espanhol, Francês, Japonês, Coreano, etc...). Usuário escolhe seu idioma nativo e qual língua ele quer aprender. Escolha do idioma nativo afeta língua da interface da extensão. Buscar direto essa informação no navegador? 
 - [ ] Sincronização com AnkiConnect (em vez de CSV manual).
 
-Acompanhe as [Issues](https://github.com/geraldohomero/VLL-VideoLanguageLearner/issues)
+Acompanhe as [Issues](https://github.com/geraldohomero/VLL-VideoLanguageLearner/issues) e o [Projeto](https://github.com/users/geraldohomero/projects/8)
