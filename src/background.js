@@ -7,10 +7,10 @@
 
 importScripts('logger.shared.js', 'messages.shared.js', 'config.shared.js', 'network.shared.js', 'database.js', 'dictionary.js', 'export.js');
 
-const VLL_GOOGLE_LOOKUP_CONCURRENCY = 6;
+const VLL_GOOGLE_LOOKUP_CONCURRENCY = 10;
 const VLL_TRANSLATE_TIMEOUT_MS = 7000;
 const VLL_TRANSLATE_RETRIES = 2;
-const VLL_TRANSLATE_BACKOFF_MS = 300;
+const VLL_TRANSLATE_BACKOFF_MS = 400;
 const VLL_TRANSLATE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 const _vllSidepanelOpenTabs = new Set();
 let _vllSettingsMutationQueue = Promise.resolve();
@@ -180,6 +180,9 @@ async function vllBatchLookupWithGoogle(words, targetLang = 'pt') {
     while (queue.length > 0) {
       const word = queue.shift();
       try {
+        // Add a small jittered delay between requests to be polite to Google
+        await vllDelay(150 + Math.random() * 250);
+        
         const translated = await vllTranslateWithGoogle(word, 'zh-CN', targetLang);
         if (translated.translatedText) {
           dictData[word] = {

@@ -256,6 +256,24 @@ main {
     transform: scale(1.05);
 }
 
+.feature-img-wrapper.dual-images {
+    display: flex;
+    gap: 0;
+    aspect-ratio: auto;
+    max-height: 500px;
+}
+
+.feature-img-wrapper.dual-images img {
+    width: 50%;
+    height: 100%;
+    object-fit: cover;
+    border-right: 1px solid var(--glass-border);
+}
+
+.feature-img-wrapper.dual-images img:last-child {
+    border-right: none;
+}
+
 .feature-content {
     padding: 24px;
 }

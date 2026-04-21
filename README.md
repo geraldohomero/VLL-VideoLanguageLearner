@@ -11,25 +11,36 @@ O **Video Language Learner (VLL)** é uma extensão para Google Chrome (Manifest
 A extensão aprimora a experiência de visualização adicionando legendas interativas e personalizadas que facilitam a compreensão e a retenção de novo vocabulário.
 
 
-![alt text](/assets/img/Image1.png)
+![alt text](assets/img/1-Main.png)
 
-![alt text](/assets/img/Image2.png)
+![alt text](assets/img/1.2-legendas-click.png)
 
-![alt text](/assets/img/image3.png)
+![alt text](assets/img/1.2-vocabulário-click.png)
 
 <table style="width: 100%; border-collapse: collapse;">
    <tr>
       <td align="center" width="33%">
          <strong>Legendas</strong><br />
-         <img src="assets/img/image01.png" alt="Legendas" width="88%" />
+         <img src="assets/img/1-legendas.png" alt="Legendas" width="88%" />
       </td>
       <td align="center" width="33%">
          <strong>Vocabulário</strong><br />
-         <img src="assets/img/image02.png" alt="Vocabulário" width="88%" />
+         <img src="assets/img/1-vocabulário.png" alt="Vocabulário" width="88%" />
       </td>
       <td align="center" width="33%">
          <strong>Configurações</strong><br />
-         <img src="assets/img/image03.png" alt="Configurações" width="88%" />
+         <img src="assets/img/1-config.png" alt="Configurações" width="88%" />
+      </td>
+   </tr>
+   <tr>
+      <td align="center" width="33%">
+         <img src="assets/img/1.2-legendas-click.png" alt="Legendas Detalhe" width="88%" />
+      </td>
+      <td align="center" width="33%">
+         <img src="assets/img/1.2-vocabulário-click.png" alt="Vocabulário Detalhe" width="88%" />
+      </td>
+      <td align="center" width="33%">
+         <img src="assets/img/1.2-config-ajuste-legenda.png" alt="Configurações Detalhe" width="88%" />
       </td>
    </tr>
 </table>

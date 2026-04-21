@@ -26,6 +26,7 @@
   };
 
   let els = {};
+  let lastSubtitleStatus = null;
 
   function asNumber(value, fallback) {
     const numeric = Number(value);
@@ -62,11 +63,13 @@
     if (els.overlayPositionX) els.overlayPositionX.value = String(asNumber(overlayPosition.x, DEFAULT_OVERLAY_POSITION.x));
     if (els.overlayPositionY) els.overlayPositionY.value = String(asNumber(overlayPosition.y, DEFAULT_OVERLAY_POSITION.y));
 
-    if (status) applyStatus(status);
+    if (status) applyStatus(status, settings.subtitleStatus);
   }
 
-  function applyStatus(status) {
+  function applyStatus(status, subtitleStatus) {
     if (!els.lookupLoadingSetting || !els.lookupProviderSetting) return;
+    
+    if (subtitleStatus) lastSubtitleStatus = subtitleStatus;
 
     if (status.googleReady) {
       els.lookupLoadingSetting.style.display = 'none';
@@ -78,12 +81,20 @@
     els.lookupLoadingSetting.style.display = 'block';
 
     if (els.lookupLoadingNote) {
+      const hasNativePt = lastSubtitleStatus?.hasNativePtTrack;
+
       if (status.inProgress) {
-        els.lookupLoadingNote.textContent = 'Google carregando em segundo plano... usando dicionário local por enquanto.';
+        els.lookupLoadingNote.textContent = hasNativePt 
+          ? 'Legendas nativas detectadas. Google carregando definições em segundo plano...'
+          : 'Google carregando em segundo plano... usando dicionário local por enquanto.';
       } else if (status.lastError) {
         els.lookupLoadingNote.textContent = `Google indisponível no momento (${status.lastError}). Mantendo dicionário local.`;
+      } else if (!status.googleReady) {
+        els.lookupLoadingNote.textContent = hasNativePt
+          ? 'Legendas nativas ativas. Google disponível para definições detalhadas.'
+          : 'Dicionário local ativo. Google disponível para definições em português.';
       } else {
-        els.lookupLoadingNote.textContent = 'Preparando Google em segundo plano... usando dicionário local por enquanto.';
+        els.lookupLoadingNote.textContent = 'Preparando Google em segundo plano...';
       }
     }
   }

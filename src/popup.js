@@ -30,6 +30,7 @@
   const $id = (id) => document.getElementById(id);
   let lookupStatusPollTimer = null;
   let subtitleStatusPollTimer = null;
+  let lastSubtitleStatus = null;
 
   function getLookupProviderValue() {
     const select = $id('lookup-provider-select');
@@ -54,12 +55,20 @@
     loadingSetting.style.display = 'block';
 
     if (loadingNote) {
+      const hasNativePt = lastSubtitleStatus?.hasNativePtTrack;
+      
       if (status && status.inProgress) {
-        loadingNote.textContent = 'Google carregando em segundo plano... usando dicionário local por enquanto.';
+        loadingNote.textContent = hasNativePt 
+          ? 'Legendas nativas detectadas. Google carregando definições em segundo plano...'
+          : 'Google carregando em segundo plano... usando dicionário local por enquanto.';
       } else if (status && status.lastError) {
         loadingNote.textContent = `Google indisponível no momento (${status.lastError}). Mantendo dicionário local.`;
+      } else if (status && !status.googleReady) {
+        loadingNote.textContent = hasNativePt
+          ? 'Legendas nativas ativas. Google disponível para definições detalhadas.'
+          : 'Dicionário local ativo. Google disponível para definições em português.';
       } else {
-        loadingNote.textContent = 'Preparando Google em segundo plano... usando dicionário local por enquanto.';
+        loadingNote.textContent = 'Preparando Google em segundo plano...';
       }
     }
   }
@@ -82,6 +91,10 @@
     const message = status?.message || 'Aguardando video do YouTube';
     statusEl.textContent = message;
     statusEl.setAttribute('data-mode', mode);
+    
+    lastSubtitleStatus = status;
+    // Re-apply lookup status to update messages if native track info changed
+    loadLookupStatus();
   }
 
   async function loadSubtitleStatus() {

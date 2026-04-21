@@ -120,7 +120,8 @@
       mode,
       message,
       updatedAt: Date.now(),
-      videoId: vllState.videoId
+      videoId: vllState.videoId,
+      hasNativePtTrack: !!vllState.hasNativePtTrack
     };
 
     chrome.runtime.sendMessage({
@@ -205,7 +206,7 @@
       const response = await chrome.runtime.sendMessage({
         type: MSG.BATCH_LOOKUP,
         words: uniqueWords,
-        provider: CFG.lookupProviders.DICTIONARY,
+        provider: vllState.settings.lookupProvider || CFG.lookupProviders.DICTIONARY,
         targetLang: vllState.settings.targetLang
       });
       if (isStaleStartup(startupToken)) return;
