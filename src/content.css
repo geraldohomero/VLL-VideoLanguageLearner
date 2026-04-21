@@ -43,15 +43,22 @@
 
 .vll-overlay {
   position: absolute;
-  bottom: 60px;
+  top: 84%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -100%);
   width: 90%;
   max-width: 900px;
   z-index: 9999;
   pointer-events: auto;
   font-family: var(--vll-font-latin);
   transition: opacity var(--vll-transition);
+  --vll-user-font-scale: 1;
+  --vll-user-contrast: 1;
+  --vll-user-text-color: var(--vll-text);
+  --vll-user-bg-color: var(--vll-bg-solid);
+  --vll-user-bg-alpha: 0.4;
+  --vll-user-bg-rgba: rgba(10, 10, 25, 0.4);
+  --vll-user-blur: 6px;
 }
 
 .vll-overlay.vll-hidden {
@@ -64,15 +71,21 @@
 .vll-subtitle-box {
   width: fit-content;
   margin: 0 auto;
-  background: var(--vll-bg);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: var(--vll-user-bg-rgba);
+  backdrop-filter: blur(var(--vll-user-blur));
+  -webkit-backdrop-filter: blur(var(--vll-user-blur));
   border: 1px solid var(--vll-glass-border);
   border-radius: var(--vll-radius);
   padding: 16px 24px;
   box-shadow: var(--vll-shadow);
   text-align: center;
   animation: vllSlideUp 0.3s ease-out;
+  filter: contrast(var(--vll-user-contrast));
+  cursor: grab;
+}
+
+.vll-subtitle-box:active {
+  cursor: grabbing;
 }
 
 @keyframes vllSlideUp {
@@ -90,9 +103,9 @@
 
 .vll-line-hanzi {
   font-family: var(--vll-font-cjk);
-  font-size: 26px;
+  font-size: calc(26px * var(--vll-user-font-scale));
   font-weight: 500;
-  color: var(--vll-text);
+  color: var(--vll-user-text-color);
   line-height: 1.6;
   letter-spacing: 1px;
   margin-bottom: 4px;
@@ -117,9 +130,9 @@
 
 .vll-line-translation {
   font-family: var(--vll-font-latin);
-  font-size: 18px;
+  font-size: calc(18px * var(--vll-user-font-scale));
   font-weight: 500;
-  color: var(--vll-text-dim);
+  color: color-mix(in srgb, var(--vll-user-text-color) 70%, #9999b5);
   line-height: 1.4;
   padding-top: 6px;
   border-top: 1px solid var(--vll-glass-border);
@@ -145,7 +158,7 @@
 
 .vll-word .vll-word-hanzi {
   font-family: var(--vll-font-cjk);
-  font-size: 26px;
+  font-size: calc(26px * var(--vll-user-font-scale));
 }
 
 .vll-word .vll-word-pinyin {
@@ -182,14 +195,14 @@
 .vll-tooltip {
   position: fixed;
   z-index: 99999;
-  min-width: 260px;
-  max-width: 360px;
-  background: var(--vll-bg);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  min-width: 210px;
+  max-width: 300px;
+  background: var(--vll-user-bg-rgba, var(--vll-bg));
+  backdrop-filter: blur(var(--vll-user-blur, 6px));
+  -webkit-backdrop-filter: blur(var(--vll-user-blur, 6px));
   border: 1px solid var(--vll-glass-border);
   border-radius: var(--vll-radius);
-  padding: 20px;
+  padding: 12px;
   box-shadow:
     0 16px 48px rgba(0, 0, 0, 0.6),
     0 0 0 1px rgba(124, 108, 240, 0.15),
@@ -197,6 +210,8 @@
   animation: vllTooltipIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   pointer-events: auto;
   font-family: var(--vll-font-latin);
+  color: var(--vll-user-text-color, var(--vll-text));
+  filter: contrast(var(--vll-user-contrast, 1));
 }
 
 @keyframes vllTooltipIn {
@@ -214,15 +229,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: nowrap;
 }
 
 .vll-tooltip-hanzi {
   font-family: var(--vll-font-cjk);
-  font-size: 36px;
+  font-size: 28px;
   font-weight: 700;
-  color: var(--vll-text);
+  color: var(--vll-user-text-color, var(--vll-text));
   margin-bottom: 0;
 }
 
@@ -230,14 +246,14 @@
   background: var(--vll-glass);
   border: 1px solid var(--vll-glass-border);
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: var(--vll-text);
-  font-size: 16px;
+  font-size: 12px;
   transition: all var(--vll-transition);
   padding: 0;
   line-height: 1;
@@ -252,43 +268,44 @@
 
 .vll-tooltip-pinyin {
   font-family: var(--vll-font-latin);
-  font-size: 18px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--vll-accent);
-  text-align: center;
-  margin-bottom: 12px;
+  text-align: left;
+  margin-bottom: 0;
+  white-space: nowrap;
 }
 
 .vll-tooltip-meaning {
-  font-size: 14px;
-  color: var(--vll-text);
-  line-height: 1.6;
-  margin-bottom: 16px;
-  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--vll-user-text-color, var(--vll-text));
+  line-height: 1.45;
+  margin-bottom: 10px;
+  padding: 8px 9px;
   background: rgba(255, 255, 255, 0.03);
   border-radius: var(--vll-radius-sm);
-  border-left: 3px solid var(--vll-accent);
+  border-left: 3px solid color-mix(in srgb, var(--vll-user-text-color, var(--vll-accent)) 55%, #7c6cf0);
 }
 
 .vll-tooltip-context {
-  font-size: 12px;
+  font-size: 10px;
   color: var(--vll-text-dim);
   font-style: italic;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 /* ── Color Buttons ───────────────────────────────────────── */
 
 .vll-color-buttons {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .vll-color-btn {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.15);
   cursor: pointer;
@@ -313,7 +330,7 @@
 
 .vll-color-btn.active::after {
   content: '✓';
-  font-size: 14px;
+  font-size: 11px;
   color: white;
   text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
@@ -343,12 +360,12 @@
 .vll-remove-btn {
   display: block;
   width: 100%;
-  padding: 8px;
+  padding: 6px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--vll-radius-sm);
   color: var(--vll-text-dim);
-  font-size: 12px;
+  font-size: 11px;
   font-family: var(--vll-font-latin);
   cursor: pointer;
   transition: all var(--vll-transition);
@@ -390,6 +407,25 @@
   border-top-color: var(--vll-accent);
   border-radius: 50%;
   animation: vllSpin 0.8s linear infinite;
+}
+
+.vll-notice {
+  position: absolute;
+  left: 50%;
+  bottom: 120px;
+  transform: translateX(-50%);
+  z-index: 99998;
+  font-size: 12px;
+  color: #f8d9de;
+  background: rgba(155, 28, 46, 0.85);
+  border: 1px solid rgba(255, 180, 194, 0.32);
+  border-radius: 10px;
+  padding: 8px 12px;
+  transition: opacity 0.25s ease;
+}
+
+.vll-notice.vll-hide {
+  opacity: 0;
 }
 
 @keyframes vllSpin {
@@ -464,7 +500,7 @@
 
 :fullscreen .vll-overlay,
 :-webkit-full-screen .vll-overlay {
-  bottom: 80px;
+  top: 86%;
 }
 
 :fullscreen .vll-line-hanzi .vll-word .vll-word-hanzi,

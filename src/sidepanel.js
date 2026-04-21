@@ -20,7 +20,11 @@
     currentIndex: -1,
     activeTab: 'transcript',
     activeFilter: 'all',
-    selectedWord: null
+    selectedWord: null,
+    subtitleStatus: {
+      mode: 'idle',
+      message: 'Aguardando legendas...'
+    }
   };
 
   /* ── DOM References ──────────────────────────────────────── */
@@ -30,7 +34,8 @@
   const els = {
     transcript: {
       list: $id('transcript-list'),
-      empty: $id('transcript-empty')
+      empty: $id('transcript-empty'),
+      status: $id('transcript-status')
     },
     vocab: {
       list: $id('vocab-list'),
@@ -45,6 +50,17 @@
       showPinyin: $id('sp-toggle-pinyin'),
       showTranslation: $id('sp-toggle-translation'),
       autoPause: $id('sp-toggle-autopause'),
+      overlayFontScale: $id('sp-overlay-font-scale'),
+      overlayContrast: $id('sp-overlay-contrast'),
+      overlayBackgroundAlpha: $id('sp-overlay-bg-alpha'),
+      overlayBlur: $id('sp-overlay-blur'),
+      overlayTextColor: $id('sp-overlay-text-color'),
+      overlayBackgroundColor: $id('sp-overlay-bg-color'),
+      overlayPositionX: $id('sp-overlay-pos-x'),
+      overlayPositionY: $id('sp-overlay-pos-y'),
+      overlayReset: $id('sp-overlay-reset'),
+      captionStyleToggle: $id('sp-caption-style-toggle'),
+      captionStyleContent: $id('sp-caption-style-content'),
       lookupLoadingSetting: $id('sp-lookup-loading-setting'),
       lookupLoadingNote: $id('sp-lookup-loading-note'),
       lookupProviderSetting: $id('sp-lookup-provider-setting')
@@ -108,10 +124,29 @@
 
     // Settings auto-save
     Object.values(els.settings).forEach(el => {
-      if (el && (el.type === 'checkbox' || el.tagName === 'SELECT')) {
-        el.addEventListener('change', saveSettings);
+      if (!el) return;
+      if (el.tagName === 'SELECT' || (el.tagName === 'INPUT' && ['checkbox', 'range', 'color'].includes(el.type))) {
+        const eventName = (el.type === 'range' || el.type === 'color') ? 'input' : 'change';
+        el.addEventListener(eventName, saveSettings);
       }
     });
+
+    if (els.settings.overlayReset) {
+      els.settings.overlayReset.addEventListener('click', async () => {
+        if (VLL_SP_Settings && typeof VLL_SP_Settings.resetOverlayStyle === 'function') {
+          VLL_SP_Settings.resetOverlayStyle();
+          await saveSettings();
+        }
+      });
+    }
+
+    if (els.settings.captionStyleToggle && els.settings.captionStyleContent) {
+      els.settings.captionStyleToggle.addEventListener('click', () => {
+        const expanded = els.settings.captionStyleToggle.getAttribute('aria-expanded') === 'true';
+        els.settings.captionStyleToggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+        els.settings.captionStyleContent.style.display = expanded ? 'none' : 'block';
+      });
+    }
 
     // Detail Panel
     $id('detail-close').addEventListener('click', () => els.detail.panel.style.display = 'none');
@@ -141,8 +176,12 @@
       const response = await chrome.runtime.sendMessage({ type: MSG.GET_SUBTITLES });
       if (response && response.subtitles) {
         state.subtitles = response.subtitles;
+        if (response.status) {
+          state.subtitleStatus = response.status;
+        }
         if (response.videoId) els.videoTitle.textContent = `Vídeo: ${response.videoId}`;
         VLL_SP_Transcript.render(state.subtitles, state.currentIndex, {
+          status: state.subtitleStatus,
           formatTime,
           onWordClick: (w, ctx) => { playPronunciation(w.hanzi); showWordDetail(w, ctx); },
           onPlayPronunciation: playPronunciation,
@@ -333,6 +372,17 @@
       case MSG.SUBTITLES_READY:
         state.subtitles = msg.subtitles || [];
         VLL_SP_Transcript.render(state.subtitles, state.currentIndex, {
+          status: state.subtitleStatus,
+          formatTime,
+          onWordClick: (w, ctx) => { playPronunciation(w.hanzi); showWordDetail(w, ctx); },
+          onPlayPronunciation: playPronunciation,
+          onSeek: (idx) => chrome.runtime.sendMessage({ type: MSG.SEEK_TO_SUBTITLE, index: idx })
+        });
+        break;
+      case MSG.SUBTITLE_STATUS_CHANGED:
+        state.subtitleStatus = msg.status || state.subtitleStatus;
+        VLL_SP_Transcript.render(state.subtitles, state.currentIndex, {
+          status: state.subtitleStatus,
           formatTime,
           onWordClick: (w, ctx) => { playPronunciation(w.hanzi); showWordDetail(w, ctx); },
           onPlayPronunciation: playPronunciation,

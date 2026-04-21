@@ -1,7 +1,7 @@
 {
   "name": "vll-video-language-learner",
   "private": true,
-  "version": "1.0.0",
+  "version": "beta-1",
   "scripts": {
     "test": "node --test tests/**/*.test.cjs"
   }

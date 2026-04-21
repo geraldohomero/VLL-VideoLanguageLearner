@@ -22,7 +22,19 @@
 
   const defaults = {
     targetLang: 'pt',
-    lookupProvider: lookupProviders.DICTIONARY
+    lookupProvider: lookupProviders.DICTIONARY,
+    overlayStyle: {
+      fontScale: 1,
+      contrast: 1,
+      textColor: '#e8e8f0',
+      backgroundColor: '#0a0a19',
+      backgroundAlpha: 0.4,
+      blur: 6
+    },
+    overlayPosition: {
+      x: 50,
+      y: 84
+    }
   };
 
   return {

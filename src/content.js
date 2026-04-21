@@ -14,6 +14,22 @@
   const CFG = VLL_ConfigShared;
   const VOCAB = VLL_VocabShared;
 
+  const DEFAULT_OVERLAY_STYLE = {
+    fontScale: CFG.defaults.overlayStyle?.fontScale ?? 1,
+    contrast: CFG.defaults.overlayStyle?.contrast ?? 1,
+    textColor: CFG.defaults.overlayStyle?.textColor ?? '#e8e8f0',
+    backgroundColor: CFG.defaults.overlayStyle?.backgroundColor ?? '#0a0a19',
+    backgroundAlpha: CFG.defaults.overlayStyle?.backgroundAlpha ?? 0.4,
+    blur: CFG.defaults.overlayStyle?.blur ?? 6
+  };
+
+  const DEFAULT_OVERLAY_POSITION = {
+    x: CFG.defaults.overlayPosition?.x ?? 50,
+    y: CFG.defaults.overlayPosition?.y ?? 84
+  };
+
+  const SUBTITLE_CHUNK_SIZE = 120;
+
   /* ── State ───────────────────────────────────────────────── */
 
   const vllState = {
@@ -25,6 +41,11 @@
     wordColors: {}, 
     ptMeanings: {}, 
     ptTrack: [],    
+    subtitleStatus: {
+      mode: 'idle',
+      message: 'Aguardando vídeo...'
+    },
+    segmentCache: new Map(),
     settings: {
       enabled: true,
       showPinyin: true,
@@ -32,7 +53,9 @@
       showTranslation: true,
       targetLang: CFG.defaults.targetLang,
       lookupProvider: CFG.lookupProviders.DICTIONARY,
-      autoPause: false
+      autoPause: false,
+      overlayStyle: { ...DEFAULT_OVERLAY_STYLE },
+      overlayPosition: { ...DEFAULT_OVERLAY_POSITION }
     }
   };
 
@@ -41,6 +64,7 @@
   let videoEl = null;
   let playerEl = null;
   let vllStartupToken = 0;
+  let overlaySettingsSaveTimer = null;
 
   function beginStartupRun() { vllStartupToken += 1; return vllStartupToken; }
   function cancelPendingStartup() { vllStartupToken += 1; }
@@ -71,11 +95,54 @@
     try {
       const result = await chrome.storage.local.get([CFG.storageKeys.SETTINGS]);
       if (result[CFG.storageKeys.SETTINGS]) {
-        vllState.settings = { ...vllState.settings, ...result[CFG.storageKeys.SETTINGS] };
+        const incoming = result[CFG.storageKeys.SETTINGS];
+        vllState.settings = {
+          ...vllState.settings,
+          ...incoming,
+          overlayStyle: {
+            ...DEFAULT_OVERLAY_STYLE,
+            ...(incoming.overlayStyle || {})
+          },
+          overlayPosition: {
+            ...DEFAULT_OVERLAY_POSITION,
+            ...(incoming.overlayPosition || {})
+          }
+        };
       }
     } catch (e) { 
       logger.warn('Failed to load settings, using defaults');
     }
+  }
+
+  function setSubtitleStatus(mode, message) {
+    vllState.subtitleStatus = {
+      mode,
+      message,
+      updatedAt: Date.now(),
+      videoId: vllState.videoId
+    };
+
+    chrome.runtime.sendMessage({
+      type: MSG.SUBTITLE_STATUS_CHANGED,
+      status: vllState.subtitleStatus
+    }).catch(() => {});
+  }
+
+  function yieldToUI() {
+    return new Promise(resolve => setTimeout(resolve, 0));
+  }
+
+  function scheduleOverlaySettingsPersist() {
+    if (overlaySettingsSaveTimer) {
+      clearTimeout(overlaySettingsSaveTimer);
+    }
+
+    overlaySettingsSaveTimer = setTimeout(() => {
+      chrome.runtime.sendMessage({ type: MSG.SAVE_SETTINGS, settings: vllState.settings }).catch((err) => {
+        logger.warn('Failed to persist overlay settings:', err);
+      });
+      overlaySettingsSaveTimer = null;
+    }, 220);
   }
 
   function waitForPlayer() {
@@ -98,24 +165,40 @@
     cleanup();
     if (!vllState.settings.enabled) return;
 
-    VLL_Overlay.create(playerEl);
+    VLL_Overlay.create(playerEl, {
+      onSettingsChange: ({ overlayStyle, overlayPosition }) => {
+        vllState.settings.overlayStyle = {
+          ...vllState.settings.overlayStyle,
+          ...(overlayStyle || {})
+        };
+        vllState.settings.overlayPosition = {
+          ...vllState.settings.overlayPosition,
+          ...(overlayPosition || {})
+        };
+
+        scheduleOverlaySettingsPersist();
+      }
+    });
     showLoading('Carregando legendas...');
+    setSubtitleStatus('loading', 'Carregando legendas...');
 
     try {
       const subData = await VLL_Subtitles.loadAllSubtitles(vllState.settings.targetLang);
       if (isStaleStartup(startupToken)) return;
 
       if (subData.zhTrack.length === 0) {
-        showLoading('Sem legendas em chinês neste vídeo');
+        const noSubtitleMessage = 'Sem legendas em chines neste video';
+        showLoading(noSubtitleMessage);
+        setSubtitleStatus('no_subtitles', noSubtitleMessage);
         setTimeout(() => hideLoading(), 3000);
         return;
       }
 
       vllState.ptTrack = subData.ptTrack;
+      vllState.segmentCache.clear();
       showLoading(`Processando ${subData.zhTrack.length} legendas...`);
 
-      const allText = subData.zhTrack.map(e => e.text).join('\n');
-      const uniqueWords = getUniqueWords(allText);
+      const uniqueWords = getUniqueWordsFromEntries(subData.zhTrack);
 
       const response = await chrome.runtime.sendMessage({
         type: MSG.BATCH_LOOKUP,
@@ -134,17 +217,8 @@
       vllState.dictData = response.dictData || {};
       vllState.wordColors = response.colorData || {};
 
-      vllState.subtitles = subData.zhTrack.map(entry => {
-        const words = segmentAndEnrich(entry.text);
-        const translation = VLL_Subtitles.matchTranslation(entry, vllState.ptTrack);
-        return {
-          start: entry.start,
-          duration: entry.duration,
-          text: entry.text,
-          words,
-          translation
-        };
-      });
+      vllState.subtitles = await processSubtitlesInChunks(subData.zhTrack, startupToken);
+      if (isStaleStartup(startupToken)) return;
 
       logger.info(`Ready! ${vllState.subtitles.length} subtitles`);
 
@@ -152,6 +226,7 @@
       hideLoading();
       vllState.active = true;
       playerEl.classList.add('vll-active');
+      setSubtitleStatus('ready', `${vllState.subtitles.length} legendas prontas`);
 
       startSync();
 
@@ -165,40 +240,86 @@
       if (isStaleStartup(startupToken)) return;
       logger.error('Startup error:', err);
       showLoading('Erro ao carregar legendas');
+      setSubtitleStatus('error', err?.message || 'Erro ao carregar legendas');
       setTimeout(() => hideLoading(), 3000);
     }
   }
 
   /* ── Word Segmentation ───────────────────────────────────── */
 
-  function getUniqueWords(text) {
-    const segmenter = new Intl.Segmenter('zh', { granularity: 'word' });
-    const words = new Set();
-    for (const seg of segmenter.segment(text)) {
-      if (seg.isWordLike) words.add(seg.segment);
+  function getSegmentedTokens(text) {
+    const cacheKey = text || '';
+    const cached = vllState.segmentCache.get(cacheKey);
+    if (cached) {
+      return cached;
     }
+
+    const segmenter = new Intl.Segmenter('zh', { granularity: 'word' });
+    const tokens = [];
+    for (const seg of segmenter.segment(cacheKey)) {
+      tokens.push({
+        hanzi: seg.segment,
+        isWord: !!seg.isWordLike
+      });
+    }
+
+    vllState.segmentCache.set(cacheKey, tokens);
+    return tokens;
+  }
+
+  function getUniqueWordsFromEntries(entries) {
+    const words = new Set();
+    (entries || []).forEach((entry) => {
+      getSegmentedTokens(entry.text).forEach((token) => {
+        if (token.isWord) words.add(token.hanzi);
+      });
+    });
     return Array.from(words);
   }
 
   function segmentAndEnrich(text) {
-    const segmenter = new Intl.Segmenter('zh', { granularity: 'word' });
-    const result = [];
+    return getSegmentedTokens(text).map((token) => {
+      const dict = token.isWord ? vllState.dictData[token.hanzi] : null;
+      const color = token.isWord ? (vllState.wordColors[token.hanzi] || null) : null;
 
-    for (const seg of segmenter.segment(text)) {
-      const dict = vllState.dictData[seg.segment];
-      const color = vllState.wordColors[seg.segment] || null;
-
-      result.push({
-        hanzi: seg.segment,
+      return {
+        hanzi: token.hanzi,
         pinyin: dict ? dict.pinyin : '',
         meaning: dict ? dict.meaning : '',
         meaningLang: dict ? (dict.meaningLang || 'en') : '',
-        isWord: seg.isWordLike,
+        isWord: token.isWord,
         color: color
+      };
+    });
+  }
+
+  async function processSubtitlesInChunks(zhTrack, startupToken) {
+    const processed = [];
+    const total = zhTrack.length;
+
+    for (let i = 0; i < total; i += SUBTITLE_CHUNK_SIZE) {
+      if (isStaleStartup(startupToken)) return [];
+
+      const chunk = zhTrack.slice(i, i + SUBTITLE_CHUNK_SIZE);
+      chunk.forEach((entry) => {
+        const words = segmentAndEnrich(entry.text);
+        const translation = VLL_Subtitles.matchTranslation(entry, vllState.ptTrack);
+        processed.push({
+          start: entry.start,
+          duration: entry.duration,
+          text: entry.text,
+          words,
+          translation
+        });
       });
+
+      const progress = Math.min(100, Math.round(((i + chunk.length) / total) * 100));
+      showLoading(`Processando legendas... ${progress}%`);
+      setSubtitleStatus('loading', `Processando legendas... ${progress}%`);
+      await yieldToUI();
     }
 
-    return result;
+    return processed;
   }
 
   /* ── UI Components ───────────────────────────────────────── */
@@ -224,6 +345,20 @@
       loadingEl.remove();
       loadingEl = null;
     }
+  }
+
+  function showTransientNotice(message) {
+    if (!playerEl || !message) return;
+
+    const notice = document.createElement('div');
+    notice.className = 'vll-notice';
+    notice.textContent = message;
+    playerEl.appendChild(notice);
+
+    setTimeout(() => {
+      notice.classList.add('vll-hide');
+      setTimeout(() => notice.remove(), 260);
+    }, 1800);
   }
 
   function createPermanentControls() {
@@ -323,12 +458,16 @@
     if (!text) return;
     try {
       const response = await chrome.runtime.sendMessage({ type: MSG.GET_PRONUNCIATION, text: text });
-      if (response.dataUrl) {
+      if (response && response.dataUrl) {
         const audio = new Audio(response.dataUrl);
         await audio.play();
+        return;
       }
+
+      showTransientNotice('Pronuncia indisponivel no momento');
     } catch (err) {
       logger.error('Pronunciation playback failed:', err);
+      showTransientNotice('Falha ao reproduzir pronuncia');
     }
   }
 
@@ -436,23 +575,54 @@
   function cleanup() {
     vllState.active = false;
     vllState.currentIndex = -1;
+    vllState.subtitles = [];
     VLL_Overlay.clear();
     VLL_Tooltip.hide();
     if (videoEl) videoEl.removeEventListener('timeupdate', onTimeUpdate);
     if (playerEl) playerEl.classList.remove('vll-active');
+    if (overlaySettingsSaveTimer) {
+      clearTimeout(overlaySettingsSaveTimer);
+      overlaySettingsSaveTimer = null;
+    }
+    setSubtitleStatus('idle', 'Aguardando legendas...');
   }
 
   /* ── Message Listener ────────────────────────────────────── */
 
-  chrome.runtime.onMessage.addListener((msg) => {
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (!VLL_MessagesShared.validate(msg)) {
       logger.warn('Invalid message received:', msg);
-      return;
+      return false;
+    }
+
+    if (msg.type === MSG.GET_SUBTITLES) {
+      sendResponse({
+        subtitles: vllState.subtitles,
+        videoId: vllState.videoId,
+        status: vllState.subtitleStatus
+      });
+      return true;
+    }
+
+    if (msg.type === MSG.GET_CURRENT_INDEX) {
+      sendResponse({ index: vllState.currentIndex, status: vllState.subtitleStatus });
+      return true;
     }
 
     switch (msg.type) {
       case MSG.SETTINGS_CHANGED:
-        vllState.settings = { ...vllState.settings, ...msg.settings };
+        vllState.settings = {
+          ...vllState.settings,
+          ...msg.settings,
+          overlayStyle: {
+            ...vllState.settings.overlayStyle,
+            ...(msg.settings?.overlayStyle || {})
+          },
+          overlayPosition: {
+            ...vllState.settings.overlayPosition,
+            ...(msg.settings?.overlayPosition || {})
+          }
+        };
         if (vllState.active) {
           if (vllState.currentIndex >= 0) {
             VLL_Overlay.render(vllState.subtitles[vllState.currentIndex], vllState.settings, onWordHover, VLL_Tooltip.startHideTimer, playPronunciation);
@@ -469,6 +639,8 @@
         }
         break;
     }
+
+    return false;
   });
 
   // Watch for SPA navigation

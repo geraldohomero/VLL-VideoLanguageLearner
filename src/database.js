@@ -5,8 +5,9 @@
  */
 
 const VLL_DB_NAME = 'VLL_DB';
-const VLL_DB_VERSION = 1;
+const VLL_DB_VERSION = 2;
 const VLL_STORE_WORDS = 'words';
+const VLL_STORE_TRANSLATIONS = 'translations';
 
 /* ── Open / Upgrade ──────────────────────────────────────── */
 
@@ -21,6 +22,12 @@ function vllOpenDB() {
         store.createIndex('color', 'color', { unique: false });
         store.createIndex('dateAdded', 'dateAdded', { unique: false });
         store.createIndex('lastSeen', 'lastSeen', { unique: false });
+      }
+
+      if (!db.objectStoreNames.contains(VLL_STORE_TRANSLATIONS)) {
+        const translationStore = db.createObjectStore(VLL_STORE_TRANSLATIONS, { keyPath: 'key' });
+        translationStore.createIndex('expiresAt', 'expiresAt', { unique: false });
+        translationStore.createIndex('updatedAt', 'updatedAt', { unique: false });
       }
     };
 
@@ -168,5 +175,96 @@ async function vllGetWordColors(wordList) {
         if (--pending === 0) { db.close(); resolve(colorMap); }
       };
     });
+  });
+}
+
+/* ── Translation Cache ───────────────────────────────────── */
+
+async function vllGetTranslationCache(key) {
+  const db = await vllOpenDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(VLL_STORE_TRANSLATIONS, 'readonly');
+    const store = tx.objectStore(VLL_STORE_TRANSLATIONS);
+    const req = store.get(key);
+
+    req.onsuccess = () => {
+      const cached = req.result || null;
+      db.close();
+
+      if (!cached) {
+        resolve(null);
+        return;
+      }
+
+      if (typeof cached.expiresAt === 'number' && cached.expiresAt <= Date.now()) {
+        resolve(null);
+        return;
+      }
+
+      resolve(cached);
+    };
+    req.onerror = () => {
+      db.close();
+      reject(req.error);
+    };
+  });
+}
+
+async function vllSetTranslationCache(entry) {
+  if (!entry || !entry.key) return null;
+
+  const db = await vllOpenDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(VLL_STORE_TRANSLATIONS, 'readwrite');
+    const store = tx.objectStore(VLL_STORE_TRANSLATIONS);
+
+    const record = {
+      key: entry.key,
+      translatedText: entry.translatedText || '',
+      romanizedText: entry.romanizedText || '',
+      sourceLang: entry.sourceLang || 'auto',
+      targetLang: entry.targetLang || 'pt',
+      updatedAt: Date.now(),
+      expiresAt: Number.isFinite(entry.expiresAt) ? entry.expiresAt : (Date.now() + 1000 * 60 * 60 * 24 * 30)
+    };
+
+    const req = store.put(record);
+    req.onsuccess = () => {
+      db.close();
+      resolve(record);
+    };
+    req.onerror = () => {
+      db.close();
+      reject(req.error);
+    };
+  });
+}
+
+async function vllPruneExpiredTranslationCache(limit = 100) {
+  const db = await vllOpenDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(VLL_STORE_TRANSLATIONS, 'readwrite');
+    const store = tx.objectStore(VLL_STORE_TRANSLATIONS);
+    const index = store.index('expiresAt');
+    const range = IDBKeyRange.upperBound(Date.now());
+    let removed = 0;
+
+    index.openCursor(range).onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (!cursor || removed >= limit) {
+        db.close();
+        resolve(removed);
+        return;
+      }
+
+      removed += 1;
+      cursor.delete();
+      cursor.continue();
+    };
+
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error || new Error('Translation cache cleanup failed'));
+    };
   });
 }

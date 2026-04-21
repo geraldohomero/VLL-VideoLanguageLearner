@@ -9,18 +9,38 @@
 
   let listEl = null;
   let emptyEl = null;
+  let statusEl = null;
 
   function init(els) {
     listEl = els.list;
     emptyEl = els.empty;
+    statusEl = els.status;
   }
 
   function render(subtitles, currentIndex, options) {
     if (!listEl) return;
     listEl.innerHTML = '';
 
+    const status = options?.status || { mode: 'idle', message: '' };
+    if (statusEl) {
+      statusEl.textContent = status.message || 'Aguardando legendas...';
+      statusEl.setAttribute('data-mode', status.mode || 'idle');
+    }
+
     if (!subtitles || subtitles.length === 0) {
-      if (emptyEl) emptyEl.style.display = 'block';
+      if (emptyEl) {
+        const emptyText = emptyEl.querySelector('p');
+        if (emptyText) {
+          if (status.mode === 'no_subtitles') {
+            emptyText.textContent = 'Este video nao possui legendas disponiveis para o VLL.';
+          } else if (status.mode === 'error') {
+            emptyText.textContent = 'Nao foi possivel carregar legendas. Tente recarregar o video.';
+          } else {
+            emptyText.textContent = 'Abra um video no YouTube com legendas em chines para comecar.';
+          }
+        }
+        emptyEl.style.display = 'block';
+      }
       return;
     }
 
