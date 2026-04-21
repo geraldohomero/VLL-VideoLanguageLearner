@@ -1,14 +1,15 @@
-import js from "@eslint/js";
+const js = require("@eslint/js");
 
-export default [
-  // Ignorar arquivos de distribuição e node_modules
+module.exports = [
+  // Ignore generated and auxiliary folders from lint scope.
   {
-    ignores: ["node_modules/**", "scratch/package/dist/**"]
+    ignores: ["node_modules/**", "scratch/**", "site/**", "eslint.config.js"]
   },
   js.configs.recommended,
-  // Configuração para scripts Node.js
+
+  // Node scripts (build/maintenance tooling).
   {
-    files: ["scripts/**/*.js", "*.cjs"],
+    files: ["scripts/**/*.js", "tests/**/*.cjs", "*.cjs"],
     languageOptions: {
       ecmaVersion: 2021,
       sourceType: "script",
@@ -18,16 +19,42 @@ export default [
         exports: "readonly",
         __dirname: "readonly",
         process: "readonly",
-        Buffer: "readonly"
+        Buffer: "readonly",
+        console: "readonly"
+      }
+    },
+    rules: {
+      "no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^(_|t)$",
+          varsIgnorePattern: "^_"
+        }
+      ]
+    }
+  },
+
+  // Browser helper pages.
+  {
+    files: ["*.js", "site/**/*.js"],
+    languageOptions: {
+      ecmaVersion: 2021,
+      sourceType: "script",
+      globals: {
+        window: "readonly",
+        document: "readonly",
+        console: "readonly",
+        fetch: "readonly"
       }
     }
   },
-  // Configuração para código da extensão (browser/webextension)
+
+  // Chrome extension runtime files (legacy global pattern).
   {
-    files: ["src/**/*.js", "src/**/*.shared.js", "sidepanel/**/*.js", "*.js"],
+    files: ["src/**/*.js"],
     languageOptions: {
       ecmaVersion: 2021,
-      sourceType: "module",
+      sourceType: "script",
       globals: {
         chrome: "readonly",
         window: "readonly",
@@ -44,12 +71,36 @@ export default [
         AbortController: "readonly",
         indexedDB: "readonly",
         IDBKeyRange: "readonly",
-        btoa: "readonly"
+        btoa: "readonly",
+        importScripts: "readonly",
+        setInterval: "readonly",
+        clearInterval: "readonly",
+        VLL_NetworkShared: "readonly",
+        VLL_MessagesShared: "readonly",
+        VLL_ConfigShared: "readonly",
+        VLL_Subtitles: "readonly",
+        vllLoadDictionary: "readonly",
+        vllBatchLookup: "readonly",
+        vllLookupWord: "readonly",
+        vllProcessLine: "readonly",
+        vllGetWord: "readonly",
+        vllSaveWord: "readonly",
+        vllUpdateColor: "readonly",
+        vllDeleteWord: "readonly",
+        vllGetAllWords: "readonly",
+        vllGetWordsByColor: "readonly",
+        vllGetWordColors: "readonly",
+        vllSaveWordsBatch: "readonly",
+        vllGetTranslationCache: "readonly",
+        vllSetTranslationCache: "readonly",
+        vllPruneExpiredTranslationCache: "readonly",
+        vllGenerateCSV: "readonly",
+        module: "readonly"
       }
     },
     rules: {
-      "no-unused-vars": "error",
-      "no-undef": "error"
+      "no-redeclare": "off",
+      "no-unused-vars": "off"
     }
   }
 ];
