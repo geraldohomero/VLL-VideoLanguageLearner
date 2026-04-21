@@ -210,13 +210,44 @@
   }
 }
 
+.vll-tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 .vll-tooltip-hanzi {
   font-family: var(--vll-font-cjk);
   font-size: 36px;
   font-weight: 700;
   color: var(--vll-text);
-  text-align: center;
-  margin-bottom: 4px;
+  margin-bottom: 0;
+}
+
+.vll-play-btn {
+  background: var(--vll-glass);
+  border: 1px solid var(--vll-glass-border);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--vll-text);
+  font-size: 16px;
+  transition: all var(--vll-transition);
+  padding: 0;
+  line-height: 1;
+}
+
+.vll-play-btn:hover {
+  background: var(--vll-accent-glow);
+  border-color: var(--vll-accent);
+  transform: scale(1.1);
+  color: var(--vll-accent);
 }
 
 .vll-tooltip-pinyin {

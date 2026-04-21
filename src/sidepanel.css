@@ -175,10 +175,43 @@ body {
 
 .vll-transcript-item {
   padding: 12px 14px;
+  padding-right: 44px;
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid transparent;
+  position: relative;
+}
+
+.vll-transcript-play-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #8888aa;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  opacity: 0;
+  padding: 0;
+}
+
+.vll-transcript-item:hover .vll-transcript-play-btn {
+  opacity: 1;
+}
+
+.vll-transcript-play-btn:hover {
+  background: rgba(124, 108, 240, 0.15);
+  border-color: rgba(124, 108, 240, 0.3);
+  transform: scale(1.1);
+  color: #7c6cf0;
 }
 
 .vll-transcript-item:hover {
@@ -450,13 +483,44 @@ body {
   color: #ff4466;
 }
 
+.vll-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
 .vll-detail-hanzi {
   font-family: 'Noto Sans SC', sans-serif;
   font-size: 36px;
   font-weight: 700;
   text-align: center;
   color: #e0e0f0;
-  margin-bottom: 4px;
+  margin-bottom: 0;
+}
+
+.vll-play-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #e0e0f0;
+  font-size: 18px;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.vll-play-btn:hover {
+  background: rgba(124, 108, 240, 0.15);
+  border-color: rgba(124, 108, 240, 0.3);
+  transform: scale(1.1);
+  color: #7c6cf0;
 }
 
 .vll-detail-pinyin {

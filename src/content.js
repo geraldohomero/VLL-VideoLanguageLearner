@@ -461,6 +461,12 @@
         }, 300);
       });
 
+      // Click for pronunciation
+      wordEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playPronunciation(w.hanzi);
+      });
+
       hanziLine.appendChild(wordEl);
     });
 
@@ -502,11 +508,26 @@
     tooltipEl.style.top = 'auto';
     tooltipEl.style.transform = 'translate(-50%, -10px)';
 
-    // Hanzi (large)
+    // Hanzi (large) + Play Button
+    const headerEl = document.createElement('div');
+    headerEl.className = 'vll-tooltip-header';
+
     const hanziEl = document.createElement('div');
     hanziEl.className = 'vll-tooltip-hanzi';
     hanziEl.textContent = wordData.hanzi;
-    tooltipEl.appendChild(hanziEl);
+    headerEl.appendChild(hanziEl);
+
+    const playBtn = document.createElement('button');
+    playBtn.className = 'vll-play-btn';
+    playBtn.innerHTML = '🔊';
+    playBtn.title = 'Tocar pronúncia';
+    playBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playPronunciation(wordData.hanzi);
+    });
+    headerEl.appendChild(playBtn);
+
+    tooltipEl.appendChild(headerEl);
 
     // Pinyin
     if (wordData.pinyin) {
@@ -637,6 +658,25 @@
   }
 
   /* ── Word Actions ────────────────────────────────────────── */
+
+  async function playPronunciation(text) {
+    if (!text) return;
+    
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: MSG.GET_PRONUNCIATION,
+        text: text
+      });
+
+      if (response.error) throw new Error(response.error);
+      if (!response.dataUrl) throw new Error('No audio data received');
+
+      const audio = new Audio(response.dataUrl);
+      await audio.play();
+    } catch (err) {
+      console.error('[VLL] Pronunciation playback failed:', err);
+    }
+  }
 
   async function saveWordColor(wordData, color, context) {
     const finalColor = color === 'white' ? null : color;

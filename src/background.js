@@ -645,6 +645,17 @@ async function handleMessage(msg, sender) {
       return { stats };
     }
 
+    case MSG.GET_PRONUNCIATION: {
+      const text = msg.text;
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=zh-CN&client=tw-ob`;
+      
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const buffer = await response.arrayBuffer();
+      const base64 = arrayBufferToBase64(buffer);
+      return { dataUrl: `data:audio/mpeg;base64,${base64}` };
+    }
+
     default:
       console.warn('[VLL] Unknown message type:', msg.type);
       return { error: 'Unknown message type' };
@@ -666,3 +677,13 @@ chrome.sidePanel.setPanelBehavior({
 chrome.tabs.onRemoved.addListener((tabId) => {
   _vllSidepanelOpenTabs.delete(tabId);
 });
+
+function arrayBufferToBase64(buffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
