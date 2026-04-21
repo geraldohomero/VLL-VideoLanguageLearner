@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VLL — Video Language Learner",
-  "version": "1.0.0",
+  "version": "1.3.4",
   "description": "Aprenda chinês assistindo YouTube. Legendas multi-camadas (Hanzi + Pinyin + Tradução), vocabulário com cores e exportação para Anki.",
   "permissions": [
     "activeTab",
@@ -17,9 +17,24 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*.youtube.com/*"],
-      "js": ["src/logger.shared.js", "src/messages.shared.js", "src/config.shared.js", "src/network.shared.js", "src/vocab.shared.js", "src/subtitles.shared.js", "src/subtitles.js", "src/overlay.js", "src/tooltip.js", "src/content.js"],
-      "css": ["src/content.css"],
+      "matches": [
+        "*://*.youtube.com/*"
+      ],
+      "js": [
+        "src/logger.shared.js",
+        "src/messages.shared.js",
+        "src/config.shared.js",
+        "src/network.shared.js",
+        "src/vocab.shared.js",
+        "src/subtitles.shared.js",
+        "src/subtitles.js",
+        "src/overlay.js",
+        "src/tooltip.js",
+        "src/content.js"
+      ],
+      "css": [
+        "src/content.css"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -41,8 +56,12 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["assets/dictionary.json"],
-      "matches": ["*://*.youtube.com/*"]
+      "resources": [
+        "assets/dictionary.json"
+      ],
+      "matches": [
+        "*://*.youtube.com/*"
+      ]
     }
   ]
 }
