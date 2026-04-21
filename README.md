@@ -13,9 +13,6 @@ A extensão aprimora a experiência de visualização adicionando legendas inter
 
 ![alt text](assets/img/1-Main.png)
 
-![alt text](assets/img/1.2-legendas-click.png)
-
-![alt text](assets/img/1.2-vocabulário-click.png)
 
 <table style="width: 100%; border-collapse: collapse;">
    <tr>
