@@ -1,9 +1,30 @@
 import js from "@eslint/js";
 
 export default [
-  js.configs.recommended,
+  // Ignorar arquivos de distribuição e node_modules
   {
-    files: ["**/*.js"],
+    ignores: ["node_modules/**", "scratch/package/dist/**"]
+  },
+  js.configs.recommended,
+  // Configuração para scripts Node.js
+  {
+    files: ["scripts/**/*.js", "*.cjs"],
+    languageOptions: {
+      ecmaVersion: 2021,
+      sourceType: "script",
+      globals: {
+        require: "readonly",
+        module: "readonly",
+        exports: "readonly",
+        __dirname: "readonly",
+        process: "readonly",
+        Buffer: "readonly"
+      }
+    }
+  },
+  // Configuração para código da extensão (browser/webextension)
+  {
+    files: ["src/**/*.js", "src/**/*.shared.js", "sidepanel/**/*.js", "*.js"],
     languageOptions: {
       ecmaVersion: 2021,
       sourceType: "module",
@@ -15,7 +36,15 @@ export default [
         fetch: "readonly",
         URL: "readonly",
         setTimeout: "readonly",
-        clearTimeout: "readonly"
+        clearTimeout: "readonly",
+        Blob: "readonly",
+        Audio: "readonly",
+        MutationObserver: "readonly",
+        location: "readonly",
+        AbortController: "readonly",
+        indexedDB: "readonly",
+        IDBKeyRange: "readonly",
+        btoa: "readonly"
       }
     },
     rules: {
