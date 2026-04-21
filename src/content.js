@@ -318,10 +318,15 @@
     hideLoading();
     loadingEl = document.createElement('div');
     loadingEl.className = 'vll-loading';
-    loadingEl.innerHTML = `
-      <div class="vll-loading-spinner"></div>
-      <span>${msg}</span>
-    `;
+    
+    const spinner = document.createElement('div');
+    spinner.className = 'vll-loading-spinner';
+    
+    const text = document.createElement('span');
+    text.textContent = msg;
+    
+    loadingEl.appendChild(spinner);
+    loadingEl.appendChild(text);
     playerEl.appendChild(loadingEl);
   }
 
@@ -397,14 +402,12 @@
   function updateToggleButton(btn) {
     if (vllState.settings.enabled) {
       btn.textContent = 'Desativar';
-      btn.style.background = 'linear-gradient(135deg, rgba(255, 68, 102, 0.2), rgba(200, 50, 80, 0.1))';
-      btn.style.borderColor = 'rgba(255, 68, 102, 0.2)';
-      btn.style.color = 'var(--vll-red)';
+      btn.classList.remove('vll-inactive');
+      btn.classList.add('vll-active');
     } else {
       btn.textContent = 'Ativar';
-      btn.style.background = 'linear-gradient(135deg, rgba(68, 221, 136, 0.2), rgba(50, 200, 100, 0.1))';
-      btn.style.borderColor = 'rgba(68, 221, 136, 0.2)';
-      btn.style.color = 'var(--vll-green)';
+      btn.classList.remove('vll-active');
+      btn.classList.add('vll-inactive');
     }
   }
 
@@ -789,12 +792,30 @@
   }
 
   function findSubtitleIndex(time) {
-    for (let i = 0; i < vllState.subtitles.length; i++) {
-      const sub = vllState.subtitles[i];
-      if (time >= sub.start && time < sub.start + sub.duration) {
-        return i;
+    const subs = vllState.subtitles;
+    if (!subs || subs.length === 0) return -1;
+
+    let lo = 0;
+    let hi = subs.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (subs[mid].start < time) lo = mid + 1;
+      else hi = mid;
+    }
+
+    // Since subtitles can overlap or have gaps, check lo and lo-1.
+    // Usually lo is the first subtitle starting AT or AFTER time.
+    // So the active subtitle is likely lo-1 or lo.
+    const candidates = [lo - 1, lo];
+    for (const idx of candidates) {
+      if (idx >= 0 && idx < subs.length) {
+        const s = subs[idx];
+        if (time >= s.start && time < s.start + s.duration) {
+          return idx;
+        }
       }
     }
+
     return -1;
   }
 

@@ -227,14 +227,18 @@
       const listEl = $id('popup-vocab-list');
       
       if (!response.words || response.words.length === 0) {
-        listEl.innerHTML = '<div class="popup-vocab-empty">Nenhuma palavra salva ainda.</div>';
+        listEl.textContent = '';
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'popup-vocab-empty';
+        emptyMsg.textContent = 'Nenhuma palavra salva ainda.';
+        listEl.appendChild(emptyMsg);
         return;
       }
 
       // Sort newest first
       const words = response.words.sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
       
-      listEl.innerHTML = '';
+      listEl.textContent = '';
       
       for (const w of words) {
         if (w.color === 'white' || !w.color) continue;
@@ -242,23 +246,48 @@
         const item = document.createElement('div');
         item.className = 'popup-vocab-item';
         
-        const meaning = w.meaningPt || w.meaning || '(sem definição)';
+        const colorDot = document.createElement('div');
+        colorDot.className = 'popup-vocab-color';
+        colorDot.setAttribute('data-color', w.color);
         
-        item.innerHTML = `
-          <div class="popup-vocab-color" data-color="${w.color}"></div>
-          <div class="popup-vocab-hanzi" title="${w.word}">${w.word}</div>
-          <div class="popup-vocab-pinyin" title="${w.pinyin}">${w.pinyin}</div>
-          <div class="popup-vocab-meaning" title="${meaning}">${meaning}</div>
-        `;
+        const hanziEl = document.createElement('div');
+        hanziEl.className = 'popup-vocab-hanzi';
+        hanziEl.textContent = w.word;
+        hanziEl.title = w.word;
+        
+        const pinyinEl = document.createElement('div');
+        pinyinEl.className = 'popup-vocab-pinyin';
+        pinyinEl.textContent = w.pinyin || '';
+        pinyinEl.title = w.pinyin || '';
+        
+        const meaning = w.meaningPt || w.meaning || '(sem definição)';
+        const meaningEl = document.createElement('div');
+        meaningEl.className = 'popup-vocab-meaning';
+        meaningEl.textContent = meaning;
+        meaningEl.title = meaning;
+        
+        item.appendChild(colorDot);
+        item.appendChild(hanziEl);
+        item.appendChild(pinyinEl);
+        item.appendChild(meaningEl);
+        
         listEl.appendChild(item);
       }
       
       if (listEl.children.length === 0) {
-         listEl.innerHTML = '<div class="popup-vocab-empty">Nenhuma palavra salva ainda.</div>';
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'popup-vocab-empty';
+        emptyMsg.textContent = 'Nenhuma palavra salva ainda.';
+        listEl.appendChild(emptyMsg);
       }
     } catch (err) {
       console.error('[VLL Popup] Failed to load vocab list:', err);
-      $id('popup-vocab-list').innerHTML = '<div class="popup-vocab-empty">Erro ao carregar banco de dados.</div>';
+      const listEl = $id('popup-vocab-list');
+      listEl.textContent = '';
+      const errorMsg = document.createElement('div');
+      errorMsg.className = 'popup-vocab-empty';
+      errorMsg.textContent = 'Erro ao carregar banco de dados.';
+      listEl.appendChild(errorMsg);
     }
   }
 

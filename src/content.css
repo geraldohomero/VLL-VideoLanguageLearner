@@ -441,6 +441,18 @@
   filter: brightness(1.2);
 }
 
+.vll-toggle-btn.vll-active {
+  background: linear-gradient(135deg, rgba(255, 68, 102, 0.2), rgba(200, 50, 80, 0.1)) !important;
+  border-color: rgba(255, 68, 102, 0.2) !important;
+  color: var(--vll-red) !important;
+}
+
+.vll-toggle-btn.vll-inactive {
+  background: linear-gradient(135deg, rgba(68, 221, 136, 0.2), rgba(50, 200, 100, 0.1)) !important;
+  border-color: rgba(68, 221, 136, 0.2) !important;
+  color: var(--vll-green) !important;
+}
+
 /* ── Hide native YouTube captions when VLL is active ─────── */
 
 .vll-active .ytp-caption-window-container {
