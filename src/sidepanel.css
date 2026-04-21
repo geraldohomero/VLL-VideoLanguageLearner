@@ -173,6 +173,41 @@ body {
   gap: 4px;
 }
 
+.vll-transcript-status {
+  margin: 0 0 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #ced0e4;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.vll-transcript-status[data-mode="ready"] {
+  border-color: rgba(68, 221, 136, 0.3);
+  color: #95e6b8;
+  background: rgba(68, 221, 136, 0.1);
+}
+
+.vll-transcript-status[data-mode="loading"] {
+  border-color: rgba(124, 108, 240, 0.35);
+  color: #bcb3ff;
+  background: rgba(124, 108, 240, 0.12);
+}
+
+.vll-transcript-status[data-mode="no_subtitles"] {
+  border-color: rgba(255, 170, 51, 0.35);
+  color: #ffcf88;
+  background: rgba(255, 170, 51, 0.12);
+}
+
+.vll-transcript-status[data-mode="error"] {
+  border-color: rgba(255, 68, 102, 0.35);
+  color: #ff9fb2;
+  background: rgba(255, 68, 102, 0.12);
+}
+
 .vll-transcript-item {
   padding: 12px 14px;
   padding-right: 44px;
@@ -726,6 +761,76 @@ body {
 
 .vll-settings-actions {
   margin-top: 4px;
+}
+
+.vll-caption-style-group {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.vll-caption-style-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.vll-caption-style-toggle .vll-settings-subtitle {
+  margin: 0;
+}
+
+.vll-caption-style-chevron {
+  color: #9e95ea;
+  transition: transform 0.2s ease;
+}
+
+.vll-caption-style-toggle[aria-expanded="true"] .vll-caption-style-chevron {
+  transform: rotate(180deg);
+}
+
+.vll-caption-style-content {
+  margin-top: 10px;
+}
+
+.vll-range-input {
+  width: 100%;
+  margin: 0 0 10px;
+  accent-color: #7c6cf0;
+}
+
+.vll-color-pickers {
+  display: grid;
+  grid-template-columns: 1fr 44px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.vll-color-input {
+  width: 38px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.vll-settings-btn-reset {
+  background: linear-gradient(135deg, rgba(255, 170, 51, 0.14), rgba(220, 140, 30, 0.08));
+  color: #ffbe61;
+  border-color: rgba(255, 170, 51, 0.2);
+}
+
+.vll-settings-btn-reset:hover {
+  background: linear-gradient(135deg, rgba(255, 170, 51, 0.24), rgba(220, 140, 30, 0.15));
+  border-color: rgba(255, 170, 51, 0.3);
 }
 
 .vll-settings-btn {

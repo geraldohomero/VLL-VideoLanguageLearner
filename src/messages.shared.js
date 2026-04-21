@@ -40,6 +40,7 @@
     SEEK_TO_SUBTITLE: 'SEEK_TO_SUBTITLE',
     SUBTITLE_CHANGED: 'SUBTITLE_CHANGED',
     SUBTITLES_READY: 'SUBTITLES_READY',
+    SUBTITLE_STATUS_CHANGED: 'SUBTITLE_STATUS_CHANGED',
 
     GET_STATS: 'GET_STATS',
 
@@ -68,6 +69,8 @@
         return typeof msg.text === 'string';
       case types.SEEK_TO_SUBTITLE:
         return typeof msg.index === 'number';
+      case types.SUBTITLE_STATUS_CHANGED:
+        return !!(msg.status && typeof msg.status.mode === 'string');
       default:
         return true; // Unknown types or types without payload requirements
     }

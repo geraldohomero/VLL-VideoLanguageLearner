@@ -127,6 +127,45 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
+.popup-status-section {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.popup-subtitle-status {
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #ced0e4;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.popup-subtitle-status[data-mode="ready"] {
+  border-color: rgba(68, 221, 136, 0.35);
+  color: #95e6b8;
+  background: rgba(68, 221, 136, 0.1);
+}
+
+.popup-subtitle-status[data-mode="loading"] {
+  border-color: rgba(124, 108, 240, 0.35);
+  color: #bcb3ff;
+  background: rgba(124, 108, 240, 0.12);
+}
+
+.popup-subtitle-status[data-mode="no_subtitles"] {
+  border-color: rgba(255, 170, 51, 0.35);
+  color: #ffcf88;
+  background: rgba(255, 170, 51, 0.12);
+}
+
+.popup-subtitle-status[data-mode="error"] {
+  border-color: rgba(255, 68, 102, 0.35);
+  color: #ff9fb2;
+  background: rgba(255, 68, 102, 0.12);
+}
+
 .popup-section-title {
   font-size: 11px;
   font-weight: 600;

@@ -29,6 +29,7 @@
 
   const $id = (id) => document.getElementById(id);
   let lookupStatusPollTimer = null;
+  let subtitleStatusPollTimer = null;
 
   function getLookupProviderValue() {
     const select = $id('lookup-provider-select');
@@ -70,6 +71,26 @@
     } catch (err) {
       console.error('[VLL Popup] Failed to load lookup status:', err);
       applyLookupStatus({});
+    }
+  }
+
+  function applySubtitleStatus(status) {
+    const statusEl = $id('popup-subtitle-status');
+    if (!statusEl) return;
+
+    const mode = status?.mode || 'idle';
+    const message = status?.message || 'Aguardando video do YouTube';
+    statusEl.textContent = message;
+    statusEl.setAttribute('data-mode', mode);
+  }
+
+  async function loadSubtitleStatus() {
+    try {
+      const response = await chrome.runtime.sendMessage({ type: MSG.GET_SUBTITLES });
+      applySubtitleStatus(response?.status || { mode: 'idle', message: 'Abra um video no YouTube para iniciar' });
+    } catch (err) {
+      console.error('[VLL Popup] Failed to load subtitle status:', err);
+      applySubtitleStatus({ mode: 'error', message: 'Nao foi possivel consultar o status das legendas' });
     }
   }
 
@@ -151,6 +172,8 @@
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === MSG.LOOKUP_STATUS_CHANGED && msg.status) {
       applyLookupStatus(msg.status);
+    } else if (msg.type === MSG.SUBTITLE_STATUS_CHANGED && msg.status) {
+      applySubtitleStatus(msg.status);
     } else if (msg.type === MSG.SETTINGS_CHANGED && msg.settings) {
       const settings = msg.settings;
       if (settings.enabled !== undefined) $id('toggle-enabled').checked = settings.enabled;
@@ -375,11 +398,14 @@
   loadStats();
   loadSettings();
   loadLookupStatus();
+  loadSubtitleStatus();
   loadVocabList();
 
   // Keep popup status responsive while open.
   lookupStatusPollTimer = setInterval(loadLookupStatus, 2000);
+  subtitleStatusPollTimer = setInterval(loadSubtitleStatus, 2500);
   window.addEventListener('beforeunload', () => {
     if (lookupStatusPollTimer) clearInterval(lookupStatusPollTimer);
+    if (subtitleStatusPollTimer) clearInterval(subtitleStatusPollTimer);
   });
 })();

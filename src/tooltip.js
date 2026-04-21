@@ -40,11 +40,6 @@
     const headerEl = document.createElement('div');
     headerEl.className = 'vll-tooltip-header';
 
-    const hanziEl = document.createElement('div');
-    hanziEl.className = 'vll-tooltip-hanzi';
-    hanziEl.textContent = wordData.hanzi;
-    headerEl.appendChild(hanziEl);
-
     const playBtn = document.createElement('button');
     playBtn.className = 'vll-play-btn';
     playBtn.innerHTML = '🔊';
@@ -55,14 +50,19 @@
     });
     headerEl.appendChild(playBtn);
 
-    tooltipEl.appendChild(headerEl);
+    const hanziEl = document.createElement('div');
+    hanziEl.className = 'vll-tooltip-hanzi';
+    hanziEl.textContent = wordData.hanzi;
+    headerEl.appendChild(hanziEl);
 
     if (wordData.pinyin) {
       const pinyinEl = document.createElement('div');
       pinyinEl.className = 'vll-tooltip-pinyin';
       pinyinEl.textContent = wordData.pinyin;
-      tooltipEl.appendChild(pinyinEl);
+      headerEl.appendChild(pinyinEl);
     }
+
+    tooltipEl.appendChild(headerEl);
 
     const meaningEl = document.createElement('div');
     meaningEl.className = 'vll-tooltip-meaning';

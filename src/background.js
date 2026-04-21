@@ -11,6 +11,7 @@ const VLL_GOOGLE_LOOKUP_CONCURRENCY = 6;
 const VLL_TRANSLATE_TIMEOUT_MS = 7000;
 const VLL_TRANSLATE_RETRIES = 2;
 const VLL_TRANSLATE_BACKOFF_MS = 300;
+const VLL_TRANSLATE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 const _vllSidepanelOpenTabs = new Set();
 let _vllSettingsMutationQueue = Promise.resolve();
 
@@ -55,6 +56,10 @@ _vllGoogleLookupState.targetLang = CFG.defaults.targetLang;
 
 function vllDelay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function vllBuildTranslationCacheKey(text, sourceLang, targetLang) {
+  return `${(sourceLang || 'auto').toLowerCase()}::${(targetLang || CFG.defaults.targetLang).toLowerCase()}::${(text || '').trim().toLowerCase()}`;
 }
 
 async function vllFetchWithTimeout(url, options = {}, timeoutMs = VLL_TRANSLATE_TIMEOUT_MS) {
@@ -121,7 +126,22 @@ async function vllTranslateWithGoogle(text, sourceLang = 'auto', targetLang = CF
     return { translatedText: '', romanizedText: '' };
   }
 
-  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sourceLang)}&tl=${encodeURIComponent(targetLang)}&dt=t&dt=rm&q=${encodeURIComponent(text)}`;
+  const normalizedText = text.trim();
+  const cacheKey = vllBuildTranslationCacheKey(normalizedText, sourceLang, targetLang);
+
+  try {
+    const cached = await vllGetTranslationCache(cacheKey);
+    if (cached && cached.translatedText) {
+      return {
+        translatedText: cached.translatedText,
+        romanizedText: cached.romanizedText || ''
+      };
+    }
+  } catch (err) {
+    console.warn('[VLL] Failed to read translation cache:', err.message);
+  }
+
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sourceLang)}&tl=${encodeURIComponent(targetLang)}&dt=t&dt=rm&q=${encodeURIComponent(normalizedText)}`;
   const res = await vllFetchWithRetry(url, {}, {
     retries: VLL_TRANSLATE_RETRIES,
     timeoutMs: VLL_TRANSLATE_TIMEOUT_MS,
@@ -133,7 +153,22 @@ async function vllTranslateWithGoogle(text, sourceLang = 'auto', targetLang = CF
     return { translatedText: '', romanizedText: '' };
   }
 
-  return vllParseGoogleTranslationResponse(data);
+  const parsed = vllParseGoogleTranslationResponse(data);
+
+  if (parsed.translatedText) {
+    vllSetTranslationCache({
+      key: cacheKey,
+      translatedText: parsed.translatedText,
+      romanizedText: parsed.romanizedText,
+      sourceLang,
+      targetLang,
+      expiresAt: Date.now() + VLL_TRANSLATE_CACHE_TTL_MS
+    }).catch((err) => {
+      console.warn('[VLL] Failed to write translation cache:', err.message);
+    });
+  }
+
+  return parsed;
 }
 
 async function vllBatchLookupWithGoogle(words, targetLang = 'pt') {
@@ -385,6 +420,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 // Also load when service worker wakes up
 vllLoadDictionary().then(() => {
   console.log('[VLL] Service worker ready');
+  vllPruneExpiredTranslationCache().catch(() => {});
 }).catch(err => {
   console.error('[VLL] Dictionary load error:', err);
 });
@@ -607,10 +643,18 @@ async function handleMessage(msg, sender) {
           const response = await chrome.tabs.sendMessage(tabs[0].id, { type: MSG.GET_SUBTITLES });
           return response;
         } catch {
-          return { subtitles: [], videoId: '' };
+          return {
+            subtitles: [],
+            videoId: '',
+            status: { mode: 'idle', message: 'Abra um video do YouTube para iniciar' }
+          };
         }
       }
-      return { subtitles: [], videoId: '' };
+      return {
+        subtitles: [],
+        videoId: '',
+        status: { mode: 'idle', message: 'Nenhum video do YouTube ativo encontrado' }
+      };
     }
 
     case MSG.SEEK_TO_SUBTITLE: {
@@ -631,6 +675,17 @@ async function handleMessage(msg, sender) {
       return { ok: true };
     }
 
+    case MSG.SUBTITLE_STATUS_CHANGED: {
+      if (!sender.tab) {
+        return { ok: true };
+      }
+      chrome.runtime.sendMessage({
+        type: MSG.SUBTITLE_STATUS_CHANGED,
+        status: msg.status
+      }).catch(() => {});
+      return { ok: true };
+    }
+
     /* ── Stats ─────────────────────────────────────────────── */
 
     case MSG.GET_STATS: {
@@ -648,12 +703,23 @@ async function handleMessage(msg, sender) {
     case MSG.GET_PRONUNCIATION: {
       const text = msg.text;
       const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=zh-CN&client=tw-ob`;
-      
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const buffer = await response.arrayBuffer();
-      const base64 = arrayBufferToBase64(buffer);
-      return { dataUrl: `data:audio/mpeg;base64,${base64}` };
+
+      try {
+        const response = await vllFetchWithRetry(url, {}, {
+          retries: 1,
+          timeoutMs: 6000,
+          backoffMs: 200
+        });
+        if (!response.ok) {
+          return { error: `HTTP ${response.status}` };
+        }
+        const buffer = await response.arrayBuffer();
+        const base64 = arrayBufferToBase64(buffer);
+        return { dataUrl: `data:audio/mpeg;base64,${base64}` };
+      } catch (err) {
+        console.warn('[VLL] TTS failed:', err.message);
+        return { error: err.message || 'Falha ao obter pronuncia' };
+      }
     }
 
     default:
