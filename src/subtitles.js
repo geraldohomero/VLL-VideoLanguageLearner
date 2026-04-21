@@ -147,6 +147,7 @@ const VLL_Subtitles = (() => {
         const tracks = data?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
         if (tracks && tracks.length > 0) {
           console.log(`[VLL] Found ${tracks.length} tracks via InnerTube API!`);
+          tracks.forEach(t => t._source = 'android');
           return parseTracks(tracks);
         }
       } else {
@@ -166,7 +167,10 @@ const VLL_Subtitles = (() => {
         if (!text.includes('captionTracks') && !text.includes('captions')) continue;
 
         const tracks = extractTracksFromHTML(text);
-        if (tracks.length > 0) return tracks;
+        if (tracks.length > 0) {
+          tracks.forEach(t => t._source = 'script');
+          return tracks;
+        }
       }
     } catch (e) {
       console.warn('[VLL] Strategy 2 failed:', e.message);
@@ -184,7 +188,10 @@ const VLL_Subtitles = (() => {
       });
       const html = await response.text();
       const tracks = extractTracksFromHTML(html);
-      if (tracks.length > 0) return tracks;
+      if (tracks.length > 0) {
+        tracks.forEach(t => t._source = 'html');
+        return tracks;
+      }
     } catch (e) {
       console.warn('[VLL] Strategy 3 failed:', e.message);
     }
@@ -256,21 +263,24 @@ const VLL_Subtitles = (() => {
    * @param {string} langCode - Language code (e.g. 'zh-CN')
    * @param {string} trackName - Track name
    * @param {string} vssId - VSS ID (e.g. '.zh-CN')
+   * @param {string} source - Source of the track metadata
    */
-  async function fetchSubtitleTrack(baseUrl, langCode, trackName, vssId) {
+  async function fetchSubtitleTrack(baseUrl, langCode, trackName, vssId, source) {
     console.log(`[VLL] Fetching subtitles for [${langCode}]`);
     console.log(`[VLL] Full baseUrl: ${baseUrl}`);
 
-    // Build URL variations to try
-    const urlVariations = [
-      // Try with lang/name/vss_id params explicitly set
-      buildSubtitleUrl(baseUrl, langCode, trackName, vssId, null),
-      buildSubtitleUrl(baseUrl, langCode, trackName, vssId, 'json3'),
-      buildSubtitleUrl(baseUrl, langCode, trackName, vssId, 'srv3'),
-      buildSubtitleUrl(baseUrl, langCode, trackName, vssId, 'vtt'),
-      // Try original URL as-is
-      baseUrl
-    ];
+    // Build URL variations to try. 
+    // IMPORTANT: For Android-sourced tracks, the baseUrl is already signed and complete.
+    // Adding/modifying params will likely break the signature and return 0 bytes.
+    const urlVariations = source === 'android' 
+      ? [baseUrl] 
+      : [
+          buildSubtitleUrl(baseUrl, langCode, trackName, vssId, null),
+          buildSubtitleUrl(baseUrl, langCode, trackName, vssId, 'json3'),
+          buildSubtitleUrl(baseUrl, langCode, trackName, vssId, 'srv3'),
+          buildSubtitleUrl(baseUrl, langCode, trackName, vssId, 'vtt'),
+          baseUrl
+        ];
 
     // De-duplicate
     const uniqueUrls = [...new Set(urlVariations)];
@@ -280,7 +290,13 @@ const VLL_Subtitles = (() => {
       console.log(`[VLL] Attempt ${i + 1}/${uniqueUrls.length}: ${fetchUrl.substring(0, 120)}...`);
 
       try {
-        const response = await fetchWithRetry(fetchUrl, {}, {
+        const headers = {};
+        // Only use Android UA if the track metadata came from the Android bypass
+        if (source === 'android') {
+           headers['User-Agent'] = 'com.google.android.youtube/20.10.38 (Linux; U; Android 14)';
+        }
+
+        const response = await fetchWithRetry(fetchUrl, { headers }, {
           retries: VLL_SUBTITLE_RETRIES,
           timeoutMs: VLL_SUBTITLE_TIMEOUT_MS,
           backoffMs: VLL_SUBTITLE_BACKOFF_MS
@@ -336,7 +352,11 @@ const VLL_Subtitles = (() => {
         url += '&tlang=' + encodeURIComponent(targetLang);
       }
 
-      const response = await fetchWithRetry(url, {}, {
+      const response = await fetchWithRetry(url, {
+        headers: {
+          'User-Agent': 'com.google.android.youtube/20.10.38 (Linux; U; Android 14)'
+        }
+      }, {
         retries: VLL_SUBTITLE_RETRIES,
         timeoutMs: VLL_SUBTITLE_TIMEOUT_MS,
         backoffMs: VLL_SUBTITLE_BACKOFF_MS
@@ -359,7 +379,11 @@ const VLL_Subtitles = (() => {
 
       // Try JSON3 format explicitly
       let url2 = url.replace(/&fmt=[^&]*/g, '').replace(/\?fmt=[^&]*&/, '?') + '&fmt=json3';
-      const response2 = await fetchWithRetry(url2, {}, {
+      const response2 = await fetchWithRetry(url2, {
+        headers: {
+          'User-Agent': 'com.google.android.youtube/20.10.38 (Linux; U; Android 14)'
+        }
+      }, {
         retries: VLL_SUBTITLE_RETRIES,
         timeoutMs: VLL_SUBTITLE_TIMEOUT_MS,
         backoffMs: VLL_SUBTITLE_BACKOFF_MS
@@ -402,8 +426,8 @@ const VLL_Subtitles = (() => {
     let ptTrack = [];
 
     if (zhMeta) {
-      console.log(`[VLL] Loading Chinese subtitles: ${zhMeta.name} [${zhMeta.languageCode}]`);
-      zhTrack = await fetchSubtitleTrack(zhMeta.baseUrl, zhMeta.languageCode, zhMeta.name, zhMeta.vssId);
+      console.log(`[VLL] Loading Chinese subtitles: ${zhMeta.name} [${zhMeta.languageCode}] (Source: ${zhMeta._source})`);
+      zhTrack = await fetchSubtitleTrack(zhMeta.baseUrl, zhMeta.languageCode, zhMeta.name, zhMeta.vssId, zhMeta._source);
       console.log(`[VLL] Loaded ${zhTrack.length} Chinese subtitle entries`);
 
       // Try to get translated track
@@ -415,8 +439,8 @@ const VLL_Subtitles = (() => {
         tracks.map(t => t.languageCode).join(', '));
 
       if (tracks.length > 0) {
-        console.log(`[VLL] Trying first available track: ${tracks[0].name}`);
-        zhTrack = await fetchSubtitleTrack(tracks[0].baseUrl, tracks[0].languageCode, tracks[0].name, tracks[0].vssId);
+        console.log(`[VLL] Trying first available track: ${tracks[0].name} (Source: ${tracks[0]._source})`);
+        zhTrack = await fetchSubtitleTrack(tracks[0].baseUrl, tracks[0].languageCode, tracks[0].name, tracks[0].vssId, tracks[0]._source);
         console.log(`[VLL] Loaded ${zhTrack.length} entries from ${tracks[0].languageCode}`);
       }
     }
@@ -425,8 +449,8 @@ const VLL_Subtitles = (() => {
     if (ptTrack.length === 0) {
       const ptMeta = findPortugueseTrack(tracks);
       if (ptMeta) {
-        console.log('[VLL] Trying Portuguese track as fallback...');
-        ptTrack = await fetchSubtitleTrack(ptMeta.baseUrl, ptMeta.languageCode, ptMeta.name, ptMeta.vssId);
+        console.log(`[VLL] Trying Portuguese track as fallback... (Source: ${ptMeta._source})`);
+        ptTrack = await fetchSubtitleTrack(ptMeta.baseUrl, ptMeta.languageCode, ptMeta.name, ptMeta.vssId, ptMeta._source);
       }
     }
 

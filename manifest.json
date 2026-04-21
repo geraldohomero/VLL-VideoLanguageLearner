@@ -18,7 +18,7 @@
   "content_scripts": [
     {
       "matches": ["*://*.youtube.com/*"],
-      "js": ["src/messages.shared.js", "src/config.shared.js", "src/network.shared.js", "src/vocab.shared.js", "src/subtitles.shared.js", "src/subtitles.js", "src/content.js"],
+      "js": ["src/logger.shared.js", "src/messages.shared.js", "src/config.shared.js", "src/network.shared.js", "src/vocab.shared.js", "src/subtitles.shared.js", "src/subtitles.js", "src/overlay.js", "src/tooltip.js", "src/content.js"],
       "css": ["src/content.css"],
       "run_at": "document_idle"
     }

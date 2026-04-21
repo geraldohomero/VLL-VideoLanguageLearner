@@ -5,7 +5,7 @@
  * Manifest V3 — no ES modules, uses importScripts().
  */
 
-importScripts('messages.shared.js', 'config.shared.js', 'network.shared.js', 'database.js', 'dictionary.js', 'export.js');
+importScripts('logger.shared.js', 'messages.shared.js', 'config.shared.js', 'network.shared.js', 'database.js', 'dictionary.js', 'export.js');
 
 const VLL_GOOGLE_LOOKUP_CONCURRENCY = 6;
 const VLL_TRANSLATE_TIMEOUT_MS = 7000;

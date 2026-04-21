@@ -51,5 +51,27 @@
     GET_PRONUNCIATION: 'GET_PRONUNCIATION'
   };
 
-  return { types };
+  function validate(msg) {
+    if (!msg || typeof msg.type !== 'string') return false;
+    
+    switch (msg.type) {
+      case types.BATCH_LOOKUP:
+      case types.PRELOAD_GOOGLE_LOOKUP:
+        return Array.isArray(msg.words);
+      case types.SAVE_WORD:
+        return !!(msg.entry && typeof msg.entry.word === 'string');
+      case types.UPDATE_COLOR:
+        return typeof msg.word === 'string' && typeof msg.color === 'string';
+      case types.DELETE_WORD:
+        return typeof msg.word === 'string';
+      case types.TRANSLATE_TEXT:
+        return typeof msg.text === 'string';
+      case types.SEEK_TO_SUBTITLE:
+        return typeof msg.index === 'number';
+      default:
+        return true; // Unknown types or types without payload requirements
+    }
+  }
+
+  return { types, validate };
 });
