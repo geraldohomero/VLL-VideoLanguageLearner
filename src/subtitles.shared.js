@@ -226,6 +226,25 @@
     return tracks.find(t => isPt(t)) || null;
   }
 
+  function findPortugueseBRTrack(tracks) {
+    const isPtBR = (t) => {
+      const lang = String(t?.languageCode || '').toLowerCase();
+      const vssId = String(t?.vssId || '').toLowerCase();
+      const name = String(t?.name || '').toLowerCase();
+
+      return (
+        lang === 'pt-br' ||
+        lang.startsWith('pt-br') ||
+        vssId.includes('pt-br') ||
+        name.includes('português (brasil)') ||
+        name.includes('portugues (brasil)') ||
+        name.includes('brazilian portuguese')
+      );
+    };
+
+    return (tracks || []).find(t => isPtBR(t)) || null;
+  }
+
   function safeJSONParse(text) {
     if (!text || text.trim().length === 0) return null;
     try {
@@ -288,6 +307,7 @@
     extractTracksFromHTML,
     findChineseTrack,
     findPortugueseTrack,
+    findPortugueseBRTrack,
     safeJSONParse,
     parseJSON3,
     parseXML

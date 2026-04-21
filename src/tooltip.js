@@ -74,7 +74,7 @@
       } else if (wordData.meaningLang === targetLang) {
         meaningEl.textContent = wordData.meaning;
       } else {
-        meaningEl.textContent = `${wordData.meaning} (Traduzindo...)`;
+        meaningEl.textContent = wordData.meaning;
         onTranslate(wordData.meaning, wordData.meaningLang || 'en').then(translatedText => {
           if (translatedText && tooltipEl && document.body.contains(tooltipEl) && hanziEl.textContent === wordData.hanzi) {
             meaningEl.textContent = translatedText;

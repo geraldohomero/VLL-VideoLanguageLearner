@@ -17,10 +17,12 @@
   const state = {
     subtitles: [],
     vocabulary: [],
+    ptMeanings: {},
     currentIndex: -1,
     activeTab: 'transcript',
     activeFilter: 'all',
     selectedWord: null,
+    detailRequestId: 0,
     subtitleStatus: {
       mode: 'idle',
       message: 'Aguardando legendas...'
@@ -247,11 +249,14 @@
 
   /* ── Actions ─────────────────────────────────────────────── */
 
-  function showWordDetail(wordData, context) {
+  async function showWordDetail(wordData, context) {
     state.selectedWord = wordData;
+    const requestId = ++state.detailRequestId;
     els.detail.hanzi.textContent = wordData.hanzi;
     els.detail.pinyin.textContent = wordData.pinyin || '';
-    els.detail.meaning.textContent = wordData.meaningPt || wordData.meaning || '(sem definição)';
+    const cachedMeaning = state.ptMeanings[wordData.hanzi];
+    const initialMeaning = cachedMeaning || wordData.meaningPt || wordData.meaning || '(sem definição)';
+    els.detail.meaning.textContent = initialMeaning;
     els.detail.context.textContent = context ? `"${context}"` : '';
 
     els.detail.colors.innerHTML = '';
@@ -271,6 +276,36 @@
     });
 
     els.detail.panel.style.display = 'block';
+
+    const targetLang = (els.settings.targetLang && els.settings.targetLang.value) || CFG.defaults.targetLang;
+    const canTranslateMeaning = !!wordData.meaning && !cachedMeaning && !wordData.meaningPt && wordData.meaningLang !== targetLang;
+
+    if (!canTranslateMeaning) return;
+
+    els.detail.meaning.textContent = `${wordData.meaning} (traduzindo...)`;
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: MSG.TRANSLATE_TEXT,
+        text: wordData.meaning,
+        sourceLang: wordData.meaningLang || 'en',
+        targetLang
+      });
+
+      const translated = response && response.translatedText;
+      if (!translated || requestId !== state.detailRequestId || state.selectedWord?.hanzi !== wordData.hanzi) {
+        return;
+      }
+
+      state.ptMeanings[wordData.hanzi] = translated;
+      state.selectedWord.meaningPt = translated;
+      els.detail.meaning.textContent = translated;
+    } catch (err) {
+      logger.error('Failed to translate sidepanel meaning:', err);
+      if (requestId === state.detailRequestId && state.selectedWord?.hanzi === wordData.hanzi) {
+        els.detail.meaning.textContent = wordData.meaning;
+      }
+    }
   }
 
   async function saveWordColor(wordData, color, context) {

@@ -41,6 +41,7 @@
     wordColors: {}, 
     ptMeanings: {}, 
     ptTrack: [],    
+    hasNativePtTrack: false,
     subtitleStatus: {
       mode: 'idle',
       message: 'Aguardando vídeo...'
@@ -195,6 +196,7 @@
       }
 
       vllState.ptTrack = subData.ptTrack;
+      vllState.hasNativePtTrack = !!subData.hasNativePtTrack;
       vllState.segmentCache.clear();
       showLoading(`Processando ${subData.zhTrack.length} legendas...`);
 
@@ -203,16 +205,10 @@
       const response = await chrome.runtime.sendMessage({
         type: MSG.BATCH_LOOKUP,
         words: uniqueWords,
-        provider: vllState.settings.lookupProvider,
+        provider: CFG.lookupProviders.DICTIONARY,
         targetLang: vllState.settings.targetLang
       });
       if (isStaleStartup(startupToken)) return;
-
-      chrome.runtime.sendMessage({
-        type: MSG.PRELOAD_GOOGLE_LOOKUP,
-        words: uniqueWords,
-        targetLang: vllState.settings.targetLang
-      }).catch(() => {});
 
       vllState.dictData = response.dictData || {};
       vllState.wordColors = response.colorData || {};
@@ -303,7 +299,9 @@
       const chunk = zhTrack.slice(i, i + SUBTITLE_CHUNK_SIZE);
       chunk.forEach((entry) => {
         const words = segmentAndEnrich(entry.text);
-        const translation = VLL_Subtitles.matchTranslation(entry, vllState.ptTrack);
+        const translation = (vllState.ptTrack && vllState.ptTrack.length > 0)
+          ? VLL_Subtitles.matchTranslation(entry, vllState.ptTrack)
+          : '';
         processed.push({
           start: entry.start,
           duration: entry.duration,
@@ -576,6 +574,7 @@
     vllState.active = false;
     vllState.currentIndex = -1;
     vllState.subtitles = [];
+    vllState.hasNativePtTrack = false;
     VLL_Overlay.clear();
     VLL_Tooltip.hide();
     if (videoEl) videoEl.removeEventListener('timeupdate', onTimeUpdate);

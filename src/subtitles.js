@@ -214,6 +214,10 @@ const VLL_Subtitles = (() => {
     return shared.findPortugueseTrack(tracks);
   }
 
+  function findPortugueseBRTrack(tracks) {
+    return shared.findPortugueseBRTrack(tracks);
+  }
+
   /**
    * Decode HTML entities in subtitle text.
    */
@@ -424,16 +428,20 @@ const VLL_Subtitles = (() => {
     const zhMeta = findChineseTrack(tracks);
     let zhTrack = [];
     let ptTrack = [];
+    let hasNativePtTrack = false;
 
     if (zhMeta) {
       console.log(`[VLL] Loading Chinese subtitles: ${zhMeta.name} [${zhMeta.languageCode}] (Source: ${zhMeta._source})`);
       zhTrack = await fetchSubtitleTrack(zhMeta.baseUrl, zhMeta.languageCode, zhMeta.name, zhMeta.vssId, zhMeta._source);
       console.log(`[VLL] Loaded ${zhTrack.length} Chinese subtitle entries`);
 
-      // Try to get translated track
-      console.log(`[VLL] Loading ${targetLang} translation...`);
-      ptTrack = await fetchTranslatedTrack(zhMeta.baseUrl, targetLang);
-      console.log(`[VLL] Loaded ${ptTrack.length} translated entries`);
+      const ptMeta = findPortugueseBRTrack(tracks) || findPortugueseTrack(tracks);
+      if (ptMeta) {
+        console.log(`[VLL] Loading native Portuguese subtitles: ${ptMeta.name} [${ptMeta.languageCode}] (Source: ${ptMeta._source})`);
+        ptTrack = await fetchSubtitleTrack(ptMeta.baseUrl, ptMeta.languageCode, ptMeta.name, ptMeta.vssId, ptMeta._source);
+        hasNativePtTrack = ptTrack.length > 0;
+        console.log(`[VLL] Loaded ${ptTrack.length} native Portuguese entries`);
+      }
     } else {
       console.warn('[VLL] No Chinese track found. Available languages:',
         tracks.map(t => t.languageCode).join(', '));
@@ -445,18 +453,17 @@ const VLL_Subtitles = (() => {
       }
     }
 
-    // If translated track is still empty, try Portuguese track directly once.
-    if (ptTrack.length === 0) {
-      const ptMeta = findPortugueseTrack(tracks);
-      if (ptMeta) {
-        console.log(`[VLL] Trying Portuguese track as fallback... (Source: ${ptMeta._source})`);
-        ptTrack = await fetchSubtitleTrack(ptMeta.baseUrl, ptMeta.languageCode, ptMeta.name, ptMeta.vssId, ptMeta._source);
-      }
+    // No native Portuguese track found: fetch translated track as fallback.
+    if (ptTrack.length === 0 && zhMeta) {
+      console.log(`[VLL] No native Portuguese subtitles found. Loading ${targetLang} translated track fallback...`);
+      ptTrack = await fetchTranslatedTrack(zhMeta.baseUrl, targetLang);
+      console.log(`[VLL] Loaded ${ptTrack.length} fallback translated entries`);
     }
 
     return {
       zhTrack,
       ptTrack,
+      hasNativePtTrack,
       tracks,
       videoId: getVideoId()
     };
@@ -482,6 +489,7 @@ const VLL_Subtitles = (() => {
     extractCaptionTracks,
     findChineseTrack,
     findPortugueseTrack,
+    findPortugueseBRTrack,
     fetchSubtitleTrack,
     fetchTranslatedTrack,
     loadAllSubtitles,
