@@ -1,5 +1,7 @@
 # VLL — Video Language Learner
 
+![CI](https://github.com/geraldohomero/VLL-VideoLanguageLearner/actions/workflows/ci.yml/badge.svg)
+
 <p align="center">
    <img src="icons/icon.png" alt="VLL Icon" width="128" />
 </p>
@@ -50,7 +52,7 @@ Passo a passo:
 
 1. [Download do arquivo zip](https://github.com/geraldohomero/VLL-VideoLanguageLearner/releases) e extraia o conteúdo do arquivo zip para uma pasta no seu computador (por exemplo, `VLL`).
 
-2. Abra o Google Chrome e acesse a página de extensões atravéÀ do endereço:
+2. Abra o Google Chrome e acesse a página de extensões pelo endereço:
 
 ```text
 chrome://extensions/
