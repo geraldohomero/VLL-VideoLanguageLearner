@@ -9,7 +9,8 @@
     "sidePanel"
   ],
   "host_permissions": [
-    "*://*.youtube.com/*"
+    "*://*.youtube.com/*",
+    "https://translate.google.com/*"
   ],
   "background": {
     "service_worker": "src/background.js"

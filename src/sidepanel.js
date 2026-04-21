@@ -356,6 +356,7 @@
             if (w.color) span.setAttribute('data-color', w.color);
             span.addEventListener('click', (e) => {
               e.stopPropagation();
+              playPronunciation(w.hanzi);
               showWordDetail(w, sub.text);
             });
             hanziLine.appendChild(span);
@@ -386,6 +387,17 @@
         transLine.textContent = sub.translation;
         item.appendChild(transLine);
       }
+
+      // Play full line button
+      const playBtn = document.createElement('button');
+      playBtn.className = 'vll-transcript-play-btn';
+      playBtn.innerHTML = '🔊';
+      playBtn.title = 'Tocar frase completa';
+      playBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playPronunciation(sub.text);
+      });
+      item.appendChild(playBtn);
 
       // Click to seek
       item.addEventListener('click', () => {
@@ -506,6 +518,7 @@
       card.appendChild(info);
 
       card.addEventListener('click', () => {
+        playPronunciation(word.word);
         showWordDetail({
           hanzi: word.word,
           pinyin: word.pinyin,
@@ -541,6 +554,11 @@
     selectedWord = wordData;
 
     $id('detail-hanzi').textContent = wordData.hanzi;
+    
+    // Add play button if not already there or just handle it via the existing ID if we change HTML
+    // But since I don't want to change HTML structure too much, I'll check if I should add a button dynamically
+    // Actually, I should probably update sidepanel.html too.
+    
     $id('detail-pinyin').textContent = wordData.pinyin || '';
     const displayMeaning = wordData.meaningPt || wordData.meaning || '(sem definição)';
     $id('detail-meaning').textContent = displayMeaning;
@@ -593,6 +611,12 @@
   // Close detail
   $id('detail-close').addEventListener('click', () => {
     wordDetail.style.display = 'none';
+  });
+
+  $id('detail-play').addEventListener('click', () => {
+    if (selectedWord) {
+      playPronunciation(selectedWord.hanzi);
+    }
   });
 
   // Remove word
@@ -660,6 +684,25 @@
   });
 
   /* ── Helpers ─────────────────────────────────────────────── */
+
+  async function playPronunciation(text) {
+    if (!text) return;
+    
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: MSG.GET_PRONUNCIATION,
+        text: text
+      });
+
+      if (response.error) throw new Error(response.error);
+      if (!response.dataUrl) throw new Error('No audio data received');
+
+      const audio = new Audio(response.dataUrl);
+      await audio.play();
+    } catch (err) {
+      console.error('[VLL SP] Pronunciation playback failed:', err);
+    }
+  }
 
   function formatTime(seconds) {
     const m = Math.floor(seconds / 60);
