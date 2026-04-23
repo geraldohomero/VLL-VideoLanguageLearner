@@ -92,6 +92,12 @@
   }
 
   function setupEventListeners() {
+    const closeSidepanelButton = $id('btn-close-sidepanel');
+
+    if (closeSidepanelButton) {
+      closeSidepanelButton.addEventListener('click', closeSidepanel);
+    }
+
     // Tab switching
     document.querySelectorAll('.vll-tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -160,6 +166,18 @@
     $id('sp-btn-data-export').addEventListener('click', exportData);
     $id('sp-btn-data-import').addEventListener('click', () => $id('sp-import-file-input').click());
     $id('sp-import-file-input').addEventListener('change', importData);
+  }
+
+  async function closeSidepanel() {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (Number.isInteger(tab?.id)) {
+        await chrome.runtime.sendMessage({ type: MSG.CLOSE_SIDEPANEL, tabId: tab.id });
+      }
+      window.close();
+    } catch (err) {
+      logger.error('Failed to close side panel:', err);
+    }
   }
 
   /* ── Data Fetching ───────────────────────────────────────── */

@@ -69,25 +69,46 @@
     }
   }
 
+  async function getActiveTabId() {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return Number.isInteger(tab?.id) ? tab.id : null;
+  }
+
+  async function openSidepanel() {
+    try {
+      const tabId = await getActiveTabId();
+      if (tabId === null) return;
+      await chrome.runtime.sendMessage({ type: MSG.OPEN_SIDEPANEL, tabId });
+    } catch (err) {
+      console.error('[VLL Popup] Failed to open side panel:', err);
+    }
+  }
+
+  async function closeSidepanel() {
+    try {
+      const tabId = await getActiveTabId();
+      if (tabId === null) return;
+      await chrome.runtime.sendMessage({ type: MSG.CLOSE_SIDEPANEL, tabId });
+    } catch (err) {
+      console.error('[VLL Popup] Failed to close side panel:', err);
+    }
+  }
+
   function bindEvents() {
     const toggle = $id('toggle-enabled');
     const sidepanelButton = $id('btn-sidepanel');
+    const closeSidepanelButton = $id('btn-close-sidepanel');
 
     if (toggle) {
       toggle.addEventListener('change', saveEnabledSetting);
     }
 
     if (sidepanelButton) {
-      sidepanelButton.addEventListener('click', async () => {
-        try {
-          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-          if (tab && tab.id !== undefined) {
-            await chrome.sidePanel.open({ tabId: tab.id });
-          }
-        } catch (err) {
-          console.error('[VLL Popup] Failed to open side panel:', err);
-        }
-      });
+      sidepanelButton.addEventListener('click', openSidepanel);
+    }
+
+    if (closeSidepanelButton) {
+      closeSidepanelButton.addEventListener('click', closeSidepanel);
     }
   }
 

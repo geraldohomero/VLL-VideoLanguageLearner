@@ -159,10 +159,23 @@ body {
 .popup-btn-primary {
   background: linear-gradient(135deg, rgba(124, 108, 240, 0.22), rgba(100, 80, 200, 0.16));
   color: #b8a9ff;
+  margin-bottom: 8px;
 }
 
 .popup-btn-primary:hover {
   background: linear-gradient(135deg, rgba(124, 108, 240, 0.3), rgba(100, 80, 200, 0.25));
+  transform: translateY(-1px);
+}
+
+.popup-btn-secondary {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #b3b3ca;
+}
+
+.popup-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.2);
   transform: translateY(-1px);
 }
 
