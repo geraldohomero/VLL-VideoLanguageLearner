@@ -65,6 +65,9 @@ chrome://extensions/
 
 ![alt text](assets/img/image-1-Install.png)
 
+![GIF](https://github.com/user-attachments/assets/47c1b8c2-c1b7-44f6-9438-55a9a904aa6f)
+
+
 ## Como Usar
 
 1. Acesse o **YouTube** e `abra um vídeo que possua legendas em chinês`.
