@@ -3,149 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VLL — Settings</title>
+  <title>VLL — Launcher</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <!-- Header -->
   <header class="popup-header">
     <div class="popup-logo">
       <span class="popup-logo-icon">✦</span>
       <span class="popup-logo-text">VLL</span>
-      <span class="popup-logo-sub">Video Language Learner</span>
+      <span class="popup-logo-sub">Launcher</span>
     </div>
-    <button class="popup-btn-sidepanel" id="btn-sidepanel" title="Abrir Painel Lateral">
-      📋
-    </button>
   </header>
 
-  <!-- Stats Cards -->
-  <section class="popup-stats" id="popup-stats">
-    <div class="stat-card stat-total">
-      <div class="stat-number" id="stat-total">0</div>
-      <div class="stat-label">Total</div>
-    </div>
-    <div class="stat-card stat-red">
-      <div class="stat-number" id="stat-red">0</div>
-      <div class="stat-label">Não sei</div>
-    </div>
-    <div class="stat-card stat-orange">
-      <div class="stat-number" id="stat-orange">0</div>
-      <div class="stat-label">Incerta</div>
-    </div>
-    <div class="stat-card stat-green">
-      <div class="stat-number" id="stat-green">0</div>
-      <div class="stat-label">Sei!</div>
-    </div>
+  <section class="popup-section popup-toggle-section">
+    <label class="popup-toggle-label" for="toggle-enabled">
+      <span>Ativar extensão</span>
+      <input type="checkbox" id="toggle-enabled" checked>
+      <span class="popup-toggle-slider"></span>
+    </label>
   </section>
 
   <section class="popup-section popup-status-section">
+    <p class="popup-section-title">Status das legendas</p>
     <div class="popup-subtitle-status" id="popup-subtitle-status">Aguardando estado das legendas...</div>
   </section>
 
-  <!-- Settings -->
-  <section class="popup-section">
-    <h3 class="popup-section-title">Configurações</h3>
-
-    <div class="popup-setting">
-      <label class="popup-toggle-label">
-        <span>Ativar Extensão</span>
-        <input type="checkbox" id="toggle-enabled" checked>
-        <span class="popup-toggle-slider"></span>
-      </label>
-    </div>
-
-    <div class="popup-setting">
-      <label class="popup-label" for="lang-select">Idioma de tradução</label>
-      <select class="popup-select" id="lang-select">
-        <option value="pt">🇧🇷 Português</option>
-        <option value="en">🇺🇸 English</option>
-        <option value="es">🇪🇸 Español</option>
-      </select>
-    </div>
-
-    <div class="popup-setting" id="lookup-loading-setting">
-      <label class="popup-label">Fonte de definições</label>
-      <div class="popup-setting-note" id="lookup-loading-note">Google carregando em segundo plano... usando dicionário local por enquanto.</div>
-    </div>
-
-    <div class="popup-setting" id="lookup-provider-setting" style="display:none;">
-      <label class="popup-label" for="lookup-provider-select">Fonte de definições</label>
-      <select class="popup-select" id="lookup-provider-select">
-        <option value="dictionary">Dicionário offline (CC-CEDICT)</option>
-        <option value="google">Google Translate</option>
-      </select>
-      <div class="popup-setting-note" id="lookup-provider-note">Google pronto. Escolha a fonte que preferir.</div>
-    </div>
-
-    <div class="popup-setting">
-      <label class="popup-toggle-label">
-        <span>Mostrar Pinyin</span>
-        <input type="checkbox" id="toggle-pinyin" checked>
-        <span class="popup-toggle-slider"></span>
-      </label>
-    </div>
-
-    <div class="popup-setting">
-      <label class="popup-toggle-label">
-        <span>Mostrar Tradução</span>
-        <input type="checkbox" id="toggle-translation" checked>
-        <span class="popup-toggle-slider"></span>
-      </label>
-    </div>
-
-    <div class="popup-setting">
-      <label class="popup-toggle-label">
-        <span>Pausa Automática</span>
-        <input type="checkbox" id="toggle-autopause">
-        <span class="popup-toggle-slider"></span>
-      </label>
-    </div>
-  </section>
-
-  <!-- Actions -->
-  <section class="popup-section">
-    <button class="popup-btn popup-btn-export" id="btn-export">
-      📥 Exportar para Anki (CSV)
+  <section class="popup-section popup-actions-section">
+    <button class="popup-btn popup-btn-primary" id="btn-sidepanel" title="Abrir Painel Lateral">
+      Abrir painel lateral
     </button>
-    <div class="popup-export-info" id="export-info" style="display:none"></div>
+    <p class="popup-hint">Gerencie vocabulário e ajustes no painel lateral.</p>
   </section>
-
-  <!-- Cross-Browser Data Transfer -->
-  <section class="popup-section">
-    <h3 class="popup-section-title">Transferência de Dados</h3>
-    <div class="popup-transfer-buttons">
-      <button class="popup-btn popup-btn-data-export" id="btn-data-export">
-        💾 Exportar Dados
-      </button>
-      <button class="popup-btn popup-btn-data-import" id="btn-data-import">
-        📂 Importar Dados
-      </button>
-    </div>
-    <input type="file" id="import-file-input" accept=".json" style="display:none">
-    <div class="popup-transfer-note">Transfira seu vocabulário entre navegadores (Chrome, Edge, Brave...)</div>
-    <div class="popup-export-info" id="data-transfer-info" style="display:none"></div>
-  </section>
-
-  <!-- Saved Words -->
-  <section class="popup-section" id="popup-vocab-section">
-    <h3 class="popup-section-title">Palavras Salvas</h3>
-    <div class="popup-vocab-list" id="popup-vocab-list">
-      <div class="popup-vocab-empty">Carregando...</div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="popup-footer">
-    VLL v1.0 — Aprenda chinês assistindo vídeos ✦
-  </footer>
 
   <script src="logger.shared.js"></script>
   <script src="messages.shared.js"></script>
-  <script src="config.shared.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
