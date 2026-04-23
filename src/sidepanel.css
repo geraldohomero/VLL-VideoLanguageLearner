@@ -45,11 +45,39 @@ body {
   backdrop-filter: blur(12px);
 }
 
+.vll-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
 .vll-logo {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
+}
+
+.vll-header-close-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #9f9fba;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.vll-header-close-btn:hover {
+  color: #ff9fb2;
+  border-color: rgba(255, 68, 102, 0.3);
+  background: rgba(255, 68, 102, 0.12);
 }
 
 .vll-logo-icon {

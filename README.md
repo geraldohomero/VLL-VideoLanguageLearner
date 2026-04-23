@@ -70,7 +70,7 @@ chrome://extensions/
 1. Acesse o **YouTube** e `abra um vídeo que possua legendas em chinês`.
 2. A extensão processará as legendas originais e renderizará automaticamente a interface multi-camadas (Hanzi, Pinyin e Tradução).
 3. **Passe o mouse** sobre os caracteres para abrir o dicionário pop-up.
-4. Clique no ícone da extensão para abrir o painel lateral e gerenciar suas palavras salvas e exportar o seu progresso para o Anki.
+4. Clique no ícone da extensão para abrir o popup launcher (ativar/desativar + status) e use **Abrir painel lateral** para gerenciar vocabulário, configurações e exportações.
 
 ## Principais Recursos
 

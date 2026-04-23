@@ -604,27 +604,26 @@ async function handleMessage(msg, sender) {
     /* ── Side Panel ────────────────────────────────────────── */
 
     case MSG.OPEN_SIDEPANEL: {
-      if (sender.tab) {
+      const tabId = vllResolveTargetTabId(msg, sender);
+      if (tabId !== null) {
         chrome.sidePanel.setOptions({
-          tabId: sender.tab.id,
+          tabId,
           enabled: true,
           path: 'src/sidepanel.html'
         }).catch(() => {});
-        await chrome.sidePanel.open({ tabId: sender.tab.id });
-        _vllSidepanelOpenTabs.add(sender.tab.id);
+        await chrome.sidePanel.open({ tabId });
+        _vllSidepanelOpenTabs.add(tabId);
       }
       return { ok: true };
     }
 
     case MSG.TOGGLE_SIDEPANEL: {
-      if (!sender.tab) return { ok: false };
-
-      const tabId = sender.tab.id;
+      const tabId = vllResolveTargetTabId(msg, sender);
+      if (tabId === null) return { ok: false };
       const isOpen = _vllSidepanelOpenTabs.has(tabId);
 
       if (isOpen) {
-        await chrome.sidePanel.setOptions({ tabId, enabled: false });
-        _vllSidepanelOpenTabs.delete(tabId);
+        await vllCloseSidepanel(tabId);
         return { ok: true, open: false };
       }
 
@@ -636,6 +635,13 @@ async function handleMessage(msg, sender) {
       await chrome.sidePanel.open({ tabId });
       _vllSidepanelOpenTabs.add(tabId);
       return { ok: true, open: true };
+    }
+
+    case MSG.CLOSE_SIDEPANEL: {
+      const tabId = vllResolveTargetTabId(msg, sender);
+      if (tabId === null) return { ok: false };
+      await vllCloseSidepanel(tabId);
+      return { ok: true, open: false };
     }
 
     case MSG.GET_SUBTITLES: {
@@ -729,6 +735,21 @@ async function handleMessage(msg, sender) {
       console.warn('[VLL] Unknown message type:', msg.type);
       return { error: 'Unknown message type' };
   }
+}
+
+function vllResolveTargetTabId(msg, sender) {
+  if (Number.isInteger(msg?.tabId)) {
+    return msg.tabId;
+  }
+  if (Number.isInteger(sender?.tab?.id)) {
+    return sender.tab.id;
+  }
+  return null;
+}
+
+async function vllCloseSidepanel(tabId) {
+  await chrome.sidePanel.setOptions({ tabId, enabled: false });
+  _vllSidepanelOpenTabs.delete(tabId);
 }
 
 /* ── Side Panel Context ────────────────────────────────────── */
