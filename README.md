@@ -63,11 +63,9 @@ chrome://extensions/
 5. Selecione a pasta raiz do projeto `VLL` no seu computador.
 6. Pronto! A extensão estará instalada. Fixe-a na barra de extensões para facilitar o acesso.
 
+![gif](assets/img/guide.gif)
+
 ![alt text](assets/img/image-1-Install.png)
-
-<img width="800" height="450" alt="image" src="https://github.com/user-attachments/assets/67ede634-bd10-49ff-a457-585518299e43" />
-
-
 
 ## Como Usar
 
