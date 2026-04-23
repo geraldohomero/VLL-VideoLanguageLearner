@@ -65,7 +65,8 @@ chrome://extensions/
 
 ![alt text](assets/img/image-1-Install.png)
 
-![GIF](https://github.com/user-attachments/assets/47c1b8c2-c1b7-44f6-9438-55a9a904aa6f)
+<img width="800" height="450" alt="image" src="https://github.com/user-attachments/assets/67ede634-bd10-49ff-a457-585518299e43" />
+
 
 
 ## Como Usar
