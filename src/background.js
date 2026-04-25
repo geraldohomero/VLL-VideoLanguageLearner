@@ -355,6 +355,26 @@ async function vllBroadcastWordColorUpdate(tabId, word, color) {
   }
 }
 
+async function vllBroadcastWordMeaningUpdate(tabId, word, customMeaning) {
+  const payload = {
+    type: MSG.WORD_MEANING_UPDATED,
+    word,
+    customMeaning
+  };
+
+  // Notify content script in the originating YouTube tab.
+  if (Number.isInteger(tabId)) {
+    chrome.tabs.sendMessage(tabId, payload).catch(() => {});
+  }
+
+  // Notify extension pages (side panel, popup, etc.).
+  try {
+    await chrome.runtime.sendMessage(payload);
+  } catch {
+    // No listeners currently open.
+  }
+}
+
 async function vllBroadcastWordColorsBulk(colorMap) {
   const payload = {
     type: MSG.WORD_COLORS_BULK_UPDATED,
@@ -498,6 +518,14 @@ async function handleMessage(msg, sender) {
       await vllDeleteWord(msg.word);
       await vllBroadcastWordColorUpdate(sender.tab?.id, msg.word, 'white');
       return { ok: true };
+    }
+
+    case MSG.UPDATE_MEANING: {
+      const result = await vllUpdateMeaning(msg.word, msg.customMeaning);
+      if (result) {
+        await vllBroadcastWordMeaningUpdate(sender.tab?.id, msg.word, msg.customMeaning);
+      }
+      return { ok: !!result, entry: result };
     }
 
     case MSG.GET_ALL_WORDS: {

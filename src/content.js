@@ -284,6 +284,7 @@
         pinyin: dict ? dict.pinyin : '',
         meaning: dict ? dict.meaning : '',
         meaningLang: dict ? (dict.meaningLang || 'en') : '',
+        customMeaning: '',
         isWord: token.isWord,
         color: color
       };
@@ -449,7 +450,8 @@
       },
       onPlay: playPronunciation,
       onSave: saveWordColor,
-      onDelete: deleteWord
+      onDelete: deleteWord,
+      onEditMeaning: editWordMeaning
     });
   }
 
@@ -483,6 +485,8 @@
           pinyin: wordData.pinyin,
           meaning: wordData.meaning,
           meaningPt: wordData.meaningPt || '',
+          customMeaning: wordData.customMeaning || '',
+          wordLang: 'zh',
           color: color,
           context: context
         }
@@ -490,6 +494,20 @@
       updateWordColorInDOM(wordData.hanzi, color);
     } catch (err) {
       logger.error('Failed to save word:', err);
+    }
+  }
+
+  async function editWordMeaning(word, customMeaning) {
+    try {
+      await chrome.runtime.sendMessage({
+        type: MSG.UPDATE_MEANING,
+        word: word,
+        customMeaning: customMeaning
+      });
+      // Update local cache so tooltip shows the new meaning immediately
+      vllState.ptMeanings[word] = customMeaning;
+    } catch (err) {
+      logger.error('Failed to edit word meaning:', err);
     }
   }
 
@@ -631,6 +649,11 @@
         break;
       case MSG.WORD_COLOR_UPDATED:
         updateWordColorInDOM(msg.word, msg.color);
+        break;
+      case MSG.WORD_MEANING_UPDATED:
+        if (msg.word && msg.customMeaning) {
+          vllState.ptMeanings[msg.word] = msg.customMeaning;
+        }
         break;
       case MSG.SEEK_TO_SUBTITLE:
         if (vllState.subtitles[msg.index]) {

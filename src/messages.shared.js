@@ -49,7 +49,9 @@
     SETTINGS_CHANGED: 'SETTINGS_CHANGED',
     WORD_COLOR_UPDATED: 'WORD_COLOR_UPDATED',
     WORD_COLORS_BULK_UPDATED: 'WORD_COLORS_BULK_UPDATED',
+    WORD_MEANING_UPDATED: 'WORD_MEANING_UPDATED',
 
+    UPDATE_MEANING: 'UPDATE_MEANING',
     GET_PRONUNCIATION: 'GET_PRONUNCIATION'
   };
 
@@ -68,6 +70,8 @@
         return typeof msg.word === 'string';
       case types.TRANSLATE_TEXT:
         return typeof msg.text === 'string';
+      case types.UPDATE_MEANING:
+        return typeof msg.word === 'string' && typeof msg.customMeaning === 'string';
       case types.SEEK_TO_SUBTITLE:
         return typeof msg.index === 'number';
       case types.SUBTITLE_STATUS_CHANGED:

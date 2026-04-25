@@ -49,6 +49,8 @@ async function vllSaveWord(entry) {
       pinyin: entry.pinyin || '',
       meaning: entry.meaning || '',
       meaningPt: entry.meaningPt || '',
+      customMeaning: entry.customMeaning || '',
+      wordLang: entry.wordLang || '',
       color: entry.color || 'red',
       dateAdded: entry.dateAdded || new Date().toISOString(),
       lastSeen: new Date().toISOString(),
@@ -87,6 +89,8 @@ async function vllSaveWordsBatch(entries) {
         pinyin: entry.pinyin || '',
         meaning: entry.meaning || '',
         meaningPt: entry.meaningPt || '',
+        customMeaning: entry.customMeaning || '',
+        wordLang: entry.wordLang || '',
         color: entry.color || 'red',
         dateAdded: entry.dateAdded || new Date().toISOString(),
         lastSeen: new Date().toISOString(),
@@ -124,6 +128,14 @@ async function vllUpdateColor(word, color) {
   const existing = await vllGetWord(word);
   if (!existing) return null;
   existing.color = color;
+  existing.lastSeen = new Date().toISOString();
+  return vllSaveWord(existing);
+}
+
+async function vllUpdateMeaning(word, customMeaning) {
+  const existing = await vllGetWord(word);
+  if (!existing) return null;
+  existing.customMeaning = customMeaning;
   existing.lastSeen = new Date().toISOString();
   return vllSaveWord(existing);
 }

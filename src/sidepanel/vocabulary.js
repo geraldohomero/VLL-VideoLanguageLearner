@@ -73,7 +73,7 @@
         info.appendChild(pinyinEl);
       }
 
-      const displayMeaning = word.meaningPt || word.meaning;
+      const displayMeaning = word.customMeaning || word.meaningPt || word.meaning;
       if (displayMeaning) {
         const meaningEl = document.createElement('div');
         meaningEl.className = 'vll-vocab-meaning';

@@ -19,7 +19,8 @@
       onTranslate, 
       onPlay, 
       onSave, 
-      onDelete 
+      onDelete,
+      onEditMeaning
     } = options;
 
     if (tooltipTimeout) {
@@ -64,11 +65,30 @@
 
     tooltipEl.appendChild(headerEl);
 
+    // Meaning container with edit capability
+    const meaningWrapper = document.createElement('div');
+    meaningWrapper.className = 'vll-tooltip-meaning-wrapper';
+
     const meaningEl = document.createElement('div');
     meaningEl.className = 'vll-tooltip-meaning';
-    tooltipEl.appendChild(meaningEl);
 
-    if (wordData.meaning) {
+    const editBtn = document.createElement('button');
+    editBtn.className = 'vll-edit-meaning-btn';
+    editBtn.innerHTML = '✏️';
+    editBtn.title = 'Editar significado';
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      startInlineEdit(meaningWrapper, meaningEl, wordData, context, onEditMeaning, onSave);
+    });
+
+    meaningWrapper.appendChild(meaningEl);
+    meaningWrapper.appendChild(editBtn);
+    tooltipEl.appendChild(meaningWrapper);
+
+    // Determine which meaning to display (customMeaning has priority)
+    if (wordData.customMeaning) {
+      meaningEl.textContent = wordData.customMeaning;
+    } else if (wordData.meaning) {
       if (ptMeanings[wordData.hanzi]) {
         meaningEl.textContent = ptMeanings[wordData.hanzi];
       } else if (wordData.meaningLang === targetLang) {
@@ -140,6 +160,71 @@
     tooltipEl.addEventListener('click', e => e.stopPropagation());
 
     document.body.appendChild(tooltipEl);
+  }
+
+  function startInlineEdit(wrapperEl, meaningEl, wordData, context, onEditMeaning, onSave) {
+    // Don't start editing if already editing
+    if (wrapperEl.querySelector('.vll-tooltip-meaning-input')) return;
+
+    const currentText = meaningEl.textContent || '';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'vll-tooltip-meaning-input';
+    input.value = currentText === '(sem definição no dicionário)' ? '' : currentText;
+    input.placeholder = 'Digite o significado...';
+
+    // Hide the meaning text and edit button
+    meaningEl.style.display = 'none';
+    const editBtn = wrapperEl.querySelector('.vll-edit-meaning-btn');
+    if (editBtn) editBtn.style.display = 'none';
+
+    wrapperEl.appendChild(input);
+    input.focus();
+    input.select();
+
+    function confirmEdit() {
+      const newMeaning = input.value.trim();
+      if (newMeaning && newMeaning !== currentText) {
+        // If word not saved yet, save it first with red color
+        if (!wordData.color || wordData.color === 'white') {
+          onSave(wordData, 'red', context);
+        }
+        onEditMeaning(wordData.hanzi, newMeaning);
+        meaningEl.textContent = newMeaning;
+        meaningEl.style.opacity = '1';
+      }
+      cleanupEdit();
+    }
+
+    function cancelEdit() {
+      cleanupEdit();
+    }
+
+    function cleanupEdit() {
+      if (input.parentNode) input.remove();
+      meaningEl.style.display = '';
+      if (editBtn) editBtn.style.display = '';
+    }
+
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmEdit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelEdit();
+      }
+    });
+
+    input.addEventListener('blur', () => {
+      // Small delay to allow click events to fire first
+      setTimeout(() => {
+        if (input.parentNode) confirmEdit();
+      }, 150);
+    });
+
+    input.addEventListener('click', (e) => e.stopPropagation());
   }
 
   function hide() {

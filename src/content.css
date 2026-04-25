@@ -280,11 +280,68 @@
   font-size: 12px;
   color: var(--vll-user-text-color, var(--vll-text));
   line-height: 1.45;
-  margin-bottom: 10px;
   padding: 8px 9px;
   background: rgba(255, 255, 255, 0.03);
   border-radius: var(--vll-radius-sm);
   border-left: 3px solid color-mix(in srgb, var(--vll-user-text-color, var(--vll-accent)) 55%, #7c6cf0);
+  flex: 1;
+  min-width: 0;
+}
+
+.vll-tooltip-meaning-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.vll-edit-meaning-btn {
+  background: var(--vll-glass);
+  border: 1px solid var(--vll-glass-border);
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all var(--vll-transition);
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.vll-edit-meaning-btn:hover {
+  background: var(--vll-accent-glow);
+  border-color: var(--vll-accent);
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.vll-tooltip-meaning-input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: var(--vll-font-latin);
+  color: var(--vll-user-text-color, var(--vll-text));
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--vll-accent);
+  border-radius: var(--vll-radius-sm);
+  outline: none;
+  box-shadow: 0 0 8px var(--vll-accent-glow);
+  transition: border-color var(--vll-transition), box-shadow var(--vll-transition);
+}
+
+.vll-tooltip-meaning-input::placeholder {
+  color: var(--vll-text-dim);
+  opacity: 0.6;
+}
+
+.vll-tooltip-meaning-input:focus {
+  border-color: var(--vll-accent);
+  box-shadow: 0 0 12px var(--vll-accent-glow);
 }
 
 .vll-tooltip-context {

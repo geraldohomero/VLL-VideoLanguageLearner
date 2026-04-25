@@ -72,6 +72,8 @@
       hanzi: $id('detail-hanzi'),
       pinyin: $id('detail-pinyin'),
       meaning: $id('detail-meaning'),
+      meaningWrapper: document.querySelector('.vll-detail-meaning-wrapper'),
+      editMeaning: $id('detail-edit-meaning'),
       context: $id('detail-context'),
       colors: $id('detail-colors')
     },
@@ -160,6 +162,9 @@
     $id('detail-close').addEventListener('click', () => els.detail.panel.style.display = 'none');
     $id('detail-play').addEventListener('click', () => state.selectedWord && playPronunciation(state.selectedWord.hanzi));
     $id('detail-remove').addEventListener('click', deleteSelectedWord);
+    if (els.detail.editMeaning) {
+      els.detail.editMeaning.addEventListener('click', () => startDetailMeaningEdit());
+    }
 
     // Export buttons
     $id('sp-btn-export').addEventListener('click', exportToAnki);
@@ -224,7 +229,7 @@
     VLL_SP_Vocab.render(state.vocabulary, state.activeFilter, {
       onWordClick: (w) => { 
         playPronunciation(w.word); 
-        showWordDetail({ hanzi: w.word, pinyin: w.pinyin, meaning: w.meaning, meaningPt: w.meaningPt, color: w.color }, w.context); 
+        showWordDetail({ hanzi: w.word, pinyin: w.pinyin, meaning: w.meaning, meaningPt: w.meaningPt, customMeaning: w.customMeaning || '', color: w.color }, w.context); 
       }
     });
   }
@@ -272,8 +277,10 @@
     const requestId = ++state.detailRequestId;
     els.detail.hanzi.textContent = wordData.hanzi;
     els.detail.pinyin.textContent = wordData.pinyin || '';
+
+    // Priority: customMeaning > cachedMeaning > meaningPt > meaning
     const cachedMeaning = state.ptMeanings[wordData.hanzi];
-    const initialMeaning = cachedMeaning || wordData.meaningPt || wordData.meaning || '(sem definição)';
+    const initialMeaning = wordData.customMeaning || cachedMeaning || wordData.meaningPt || wordData.meaning || '(sem definição)';
     els.detail.meaning.textContent = initialMeaning;
     els.detail.context.textContent = context ? `"${context}"` : '';
 
@@ -294,6 +301,9 @@
     });
 
     els.detail.panel.style.display = 'block';
+
+    // Don't translate if we already have a custom meaning
+    if (wordData.customMeaning) return;
 
     const targetLang = (els.settings.targetLang && els.settings.targetLang.value) || CFG.defaults.targetLang;
     const canTranslateMeaning = !!wordData.meaning && !cachedMeaning && !wordData.meaningPt && wordData.meaningLang !== targetLang;
@@ -330,11 +340,80 @@
     try {
       await chrome.runtime.sendMessage({
         type: MSG.SAVE_WORD,
-        entry: { word: wordData.hanzi, pinyin: wordData.pinyin, meaning: wordData.meaning, meaningPt: wordData.meaningPt, color: color, context: context || '' }
+        entry: { word: wordData.hanzi, pinyin: wordData.pinyin, meaning: wordData.meaning, meaningPt: wordData.meaningPt, customMeaning: wordData.customMeaning || '', wordLang: 'zh', color: color, context: context || '' }
       });
       loadVocabData();
       VLL_SP_Transcript.updateWordColor(wordData.hanzi, color);
     } catch (err) { logger.error('Failed to save word color:', err); }
+  }
+
+  function startDetailMeaningEdit() {
+    if (!state.selectedWord || !els.detail.meaningWrapper) return;
+    // Don't start if already editing
+    if (els.detail.meaningWrapper.querySelector('.vll-detail-meaning-input')) return;
+
+    const currentText = els.detail.meaning.textContent || '';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'vll-detail-meaning-input';
+    input.value = currentText === '(sem definição)' ? '' : currentText;
+    input.placeholder = 'Digite o significado...';
+
+    els.detail.meaning.style.display = 'none';
+    if (els.detail.editMeaning) els.detail.editMeaning.style.display = 'none';
+
+    els.detail.meaningWrapper.appendChild(input);
+    input.focus();
+    input.select();
+
+    function confirmEdit() {
+      const newMeaning = input.value.trim();
+      if (newMeaning && newMeaning !== currentText) {
+        // If word not saved yet, save first
+        if (!state.selectedWord.color || state.selectedWord.color === 'white') {
+          saveWordColor(state.selectedWord, 'red', els.detail.context.textContent.replace(/^"|"$/g, ''));
+        }
+        editWordMeaning(state.selectedWord.hanzi, newMeaning);
+        els.detail.meaning.textContent = newMeaning;
+      }
+      cleanupEdit();
+    }
+
+    function cleanupEdit() {
+      if (input.parentNode) input.remove();
+      els.detail.meaning.style.display = '';
+      if (els.detail.editMeaning) els.detail.editMeaning.style.display = '';
+    }
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmEdit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cleanupEdit();
+      }
+    });
+
+    input.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (input.parentNode) confirmEdit();
+      }, 150);
+    });
+  }
+
+  async function editWordMeaning(word, customMeaning) {
+    try {
+      await chrome.runtime.sendMessage({
+        type: MSG.UPDATE_MEANING,
+        word: word,
+        customMeaning: customMeaning
+      });
+      state.ptMeanings[word] = customMeaning;
+      if (state.selectedWord && state.selectedWord.hanzi === word) {
+        state.selectedWord.customMeaning = customMeaning;
+      }
+    } catch (err) { logger.error('Failed to edit word meaning:', err); }
   }
 
   async function deleteSelectedWord() {
@@ -449,6 +528,18 @@
       case MSG.WORD_COLOR_UPDATED:
         loadVocabData();
         VLL_SP_Transcript.updateWordColor(msg.word, msg.color);
+        break;
+      case MSG.WORD_MEANING_UPDATED:
+        if (msg.word && msg.customMeaning) {
+          state.ptMeanings[msg.word] = msg.customMeaning;
+          // Update the detail panel if the same word is selected
+          if (state.selectedWord && state.selectedWord.hanzi === msg.word) {
+            state.selectedWord.customMeaning = msg.customMeaning;
+            els.detail.meaning.textContent = msg.customMeaning;
+          }
+          // Refresh vocabulary list to show updated meanings
+          loadVocabData();
+        }
         break;
       case MSG.SETTINGS_CHANGED:
         loadSettings();
