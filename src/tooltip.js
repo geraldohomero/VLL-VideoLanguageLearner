@@ -113,6 +113,36 @@
       tooltipEl.appendChild(ctxEl);
     }
 
+    // Google Translate links
+    const gtLinks = document.createElement('div');
+    gtLinks.className = 'vll-gt-links';
+
+    const sourceLang = wordData.meaningLang === targetLang ? 'auto' : 'zh-CN';
+
+    const gtWordBtn = document.createElement('a');
+    gtWordBtn.className = 'vll-gt-link';
+    gtWordBtn.href = `https://translate.google.com/?sl=${sourceLang}&tl=${encodeURIComponent(targetLang)}&text=${encodeURIComponent(wordData.hanzi)}&op=translate`;
+    gtWordBtn.target = '_blank';
+    gtWordBtn.rel = 'noopener';
+    gtWordBtn.title = 'Buscar palavra no Google Tradutor';
+    gtWordBtn.innerHTML = '<span class="vll-gt-icon">G</span> Palavra';
+    gtWordBtn.addEventListener('click', (e) => e.stopPropagation());
+    gtLinks.appendChild(gtWordBtn);
+
+    if (context) {
+      const gtSentenceBtn = document.createElement('a');
+      gtSentenceBtn.className = 'vll-gt-link';
+      gtSentenceBtn.href = `https://translate.google.com/?sl=${sourceLang}&tl=${encodeURIComponent(targetLang)}&text=${encodeURIComponent(context)}&op=translate`;
+      gtSentenceBtn.target = '_blank';
+      gtSentenceBtn.rel = 'noopener';
+      gtSentenceBtn.title = 'Buscar frase no Google Tradutor';
+      gtSentenceBtn.innerHTML = '<span class="vll-gt-icon">G</span> Frase';
+      gtSentenceBtn.addEventListener('click', (e) => e.stopPropagation());
+      gtLinks.appendChild(gtSentenceBtn);
+    }
+
+    tooltipEl.appendChild(gtLinks);
+
     const colorBtns = document.createElement('div');
     colorBtns.className = 'vll-color-buttons';
 
@@ -167,11 +197,19 @@
     if (wrapperEl.querySelector('.vll-tooltip-meaning-input')) return;
 
     const currentText = meaningEl.textContent || '';
-    const input = document.createElement('input');
-    input.type = 'text';
+    const meaningHeight = meaningEl.offsetHeight;
+
+    // Lock tooltip dimensions before hiding elements
+    if (tooltipEl) {
+      tooltipEl.style.width = `${tooltipEl.offsetWidth}px`;
+      tooltipEl.style.minHeight = `${tooltipEl.offsetHeight}px`;
+    }
+
+    const input = document.createElement('textarea');
     input.className = 'vll-tooltip-meaning-input';
     input.value = currentText === '(sem definição no dicionário)' ? '' : currentText;
     input.placeholder = 'Digite o significado...';
+    input.style.minHeight = `${Math.max(meaningHeight, 36)}px`;
 
     // Hide the meaning text and edit button
     meaningEl.style.display = 'none';
@@ -204,6 +242,11 @@
       if (input.parentNode) input.remove();
       meaningEl.style.display = '';
       if (editBtn) editBtn.style.display = '';
+      // Unlock tooltip dimensions
+      if (tooltipEl) {
+        tooltipEl.style.width = '';
+        tooltipEl.style.minHeight = '';
+      }
     }
 
     input.addEventListener('keydown', (e) => {

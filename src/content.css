@@ -284,13 +284,11 @@
   background: rgba(255, 255, 255, 0.03);
   border-radius: var(--vll-radius-sm);
   border-left: 3px solid color-mix(in srgb, var(--vll-user-text-color, var(--vll-accent)) 55%, #7c6cf0);
-  flex: 1;
-  min-width: 0;
 }
 
 .vll-tooltip-meaning-wrapper {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 4px;
   margin-bottom: 10px;
 }
@@ -299,31 +297,34 @@
   background: var(--vll-glass);
   border: 1px solid var(--vll-glass-border);
   border-radius: 6px;
-  width: 24px;
-  height: 24px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 10px;
   transition: all var(--vll-transition);
-  padding: 0;
+  padding: 0 8px;
   line-height: 1;
-  flex-shrink: 0;
-  opacity: 0.6;
+  opacity: 0.5;
+  align-self: flex-end;
+  color: var(--vll-text-dim);
+  font-family: var(--vll-font-latin);
 }
 
 .vll-edit-meaning-btn:hover {
   background: var(--vll-accent-glow);
   border-color: var(--vll-accent);
   opacity: 1;
-  transform: scale(1.1);
+  color: var(--vll-accent);
 }
 
 .vll-tooltip-meaning-input {
   width: 100%;
   padding: 6px 8px;
   font-size: 12px;
+  line-height: 1.45;
   font-family: var(--vll-font-latin);
   color: var(--vll-user-text-color, var(--vll-text));
   background: rgba(255, 255, 255, 0.06);
@@ -332,6 +333,8 @@
   outline: none;
   box-shadow: 0 0 8px var(--vll-accent-glow);
   transition: border-color var(--vll-transition), box-shadow var(--vll-transition);
+  resize: vertical;
+  box-sizing: border-box;
 }
 
 .vll-tooltip-meaning-input::placeholder {
@@ -349,6 +352,53 @@
   color: var(--vll-text-dim);
   font-style: italic;
   margin-bottom: 8px;
+}
+
+/* ── Google Translate Links ──────────────────────────────── */
+
+.vll-gt-links {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.vll-gt-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-family: var(--vll-font-latin);
+  font-weight: 500;
+  color: var(--vll-text-dim);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--vll-transition);
+}
+
+.vll-gt-link:hover {
+  background: rgba(66, 133, 244, 0.12);
+  border-color: rgba(66, 133, 244, 0.3);
+  color: #8ab4f8;
+}
+
+.vll-gt-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4285f4, #34a853);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 /* ── Color Buttons ───────────────────────────────────────── */

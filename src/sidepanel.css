@@ -602,14 +602,12 @@ body {
   background: rgba(255, 255, 255, 0.03);
   border-radius: 8px;
   border-left: 3px solid #7c6cf0;
-  flex: 1;
-  min-width: 0;
 }
 
 .vll-detail-meaning-wrapper {
   display: flex;
-  align-items: flex-start;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
   margin-bottom: 12px;
 }
 
@@ -617,32 +615,34 @@ body {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  width: 32px;
-  height: 32px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 5px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 11px;
+  font-family: 'Inter', sans-serif;
   transition: all 0.2s ease;
-  padding: 0;
+  padding: 0 10px;
   line-height: 1;
-  flex-shrink: 0;
-  opacity: 0.6;
-  margin-top: 8px;
+  opacity: 0.5;
+  align-self: flex-end;
+  color: #8888aa;
 }
 
 .vll-word-detail .vll-edit-meaning-btn:hover {
   background: rgba(124, 108, 240, 0.15);
   border-color: rgba(124, 108, 240, 0.3);
   opacity: 1;
-  transform: scale(1.1);
+  color: #7c6cf0;
 }
 
 .vll-detail-meaning-input {
   width: 100%;
   padding: 10px 12px;
   font-size: 14px;
+  line-height: 1.6;
   font-family: 'Inter', sans-serif;
   color: #e0e0f0;
   background: rgba(255, 255, 255, 0.06);
@@ -651,6 +651,8 @@ body {
   outline: none;
   box-shadow: 0 0 12px rgba(124, 108, 240, 0.15);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  resize: vertical;
+  box-sizing: border-box;
 }
 
 .vll-detail-meaning-input::placeholder {
@@ -666,8 +668,53 @@ body {
   font-size: 12px;
   color: #666680;
   font-style: italic;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   text-align: center;
+}
+
+.vll-word-detail .vll-gt-links {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.vll-word-detail .vll-gt-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  color: #8888aa;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vll-word-detail .vll-gt-link:hover {
+  background: rgba(66, 133, 244, 0.12);
+  border-color: rgba(66, 133, 244, 0.3);
+  color: #8ab4f8;
+}
+
+.vll-word-detail .vll-gt-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4285f4, #34a853);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .vll-word-detail .vll-color-buttons {

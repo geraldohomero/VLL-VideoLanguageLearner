@@ -75,7 +75,9 @@
       meaningWrapper: document.querySelector('.vll-detail-meaning-wrapper'),
       editMeaning: $id('detail-edit-meaning'),
       context: $id('detail-context'),
-      colors: $id('detail-colors')
+      colors: $id('detail-colors'),
+      gtWord: $id('detail-gt-word'),
+      gtSentence: $id('detail-gt-sentence')
     },
     videoTitle: $id('vll-video-title')
   };
@@ -300,6 +302,22 @@
       els.detail.colors.appendChild(btn);
     });
 
+    // Set Google Translate links
+    const gtTargetLang = (els.settings.targetLang && els.settings.targetLang.value) || CFG.defaults.targetLang;
+    const gtSourceLang = 'zh-CN';
+
+    if (els.detail.gtWord) {
+      els.detail.gtWord.href = `https://translate.google.com/?sl=${gtSourceLang}&tl=${encodeURIComponent(gtTargetLang)}&text=${encodeURIComponent(wordData.hanzi)}&op=translate`;
+    }
+    if (els.detail.gtSentence) {
+      if (context) {
+        els.detail.gtSentence.href = `https://translate.google.com/?sl=${gtSourceLang}&tl=${encodeURIComponent(gtTargetLang)}&text=${encodeURIComponent(context)}&op=translate`;
+        els.detail.gtSentence.style.display = '';
+      } else {
+        els.detail.gtSentence.style.display = 'none';
+      }
+    }
+
     els.detail.panel.style.display = 'block';
 
     // Don't translate if we already have a custom meaning
@@ -353,11 +371,13 @@
     if (els.detail.meaningWrapper.querySelector('.vll-detail-meaning-input')) return;
 
     const currentText = els.detail.meaning.textContent || '';
-    const input = document.createElement('input');
-    input.type = 'text';
+    const meaningHeight = els.detail.meaning.offsetHeight;
+
+    const input = document.createElement('textarea');
     input.className = 'vll-detail-meaning-input';
     input.value = currentText === '(sem definição)' ? '' : currentText;
     input.placeholder = 'Digite o significado...';
+    input.style.minHeight = `${Math.max(meaningHeight, 40)}px`;
 
     els.detail.meaning.style.display = 'none';
     if (els.detail.editMeaning) els.detail.editMeaning.style.display = 'none';
