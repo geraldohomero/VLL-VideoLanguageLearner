@@ -88,6 +88,10 @@ chrome://extensions/
 - **HTML, CSS e JavaScript (Vanilla)**
 - **Chrome Extensions API:** Manipulação do DOM (`content_scripts`), processos em segundo plano (`service_worker`) e painel lateral (`side_panel`).
 
+## Documentação
+
+[Veja a documentação completa](./docs/docs.md)
+
 ## Contribuição
 
 Contribuições são muito bem-vindas! Se você encontrar algum problema ou tiver uma ideia de nova funcionalidade:
