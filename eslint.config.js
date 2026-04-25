@@ -86,6 +86,7 @@ module.exports = [
         vllGetWord: "readonly",
         vllSaveWord: "readonly",
         vllUpdateColor: "readonly",
+        vllUpdateMeaning: "readonly",
         vllDeleteWord: "readonly",
         vllGetAllWords: "readonly",
         vllGetWordsByColor: "readonly",
