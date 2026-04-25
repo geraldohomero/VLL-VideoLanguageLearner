@@ -52,7 +52,8 @@
     WORD_MEANING_UPDATED: 'WORD_MEANING_UPDATED',
 
     UPDATE_MEANING: 'UPDATE_MEANING',
-    GET_PRONUNCIATION: 'GET_PRONUNCIATION'
+    GET_PRONUNCIATION: 'GET_PRONUNCIATION',
+    BATCH_TRANSLATE_LINES: 'BATCH_TRANSLATE_LINES'
   };
 
   function validate(msg) {
@@ -72,6 +73,8 @@
         return typeof msg.text === 'string';
       case types.UPDATE_MEANING:
         return typeof msg.word === 'string' && typeof msg.customMeaning === 'string';
+      case types.BATCH_TRANSLATE_LINES:
+        return Array.isArray(msg.entries);
       case types.SEEK_TO_SUBTITLE:
         return typeof msg.index === 'number';
       case types.SUBTITLE_STATUS_CHANGED:

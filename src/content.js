@@ -199,6 +199,34 @@
       vllState.ptTrack = subData.ptTrack;
       vllState.hasNativePtTrack = !!subData.hasNativePtTrack;
       vllState.segmentCache.clear();
+
+      // Fallback: if no Portuguese track (YouTube API may have returned 429),
+      // batch-translate Chinese lines via Google Translate in the background.
+      if (vllState.ptTrack.length === 0 && subData.zhTrack.length > 0) {
+        logger.info('No PT track from YouTube. Falling back to Google Translate...');
+        showLoading('Traduzindo legendas via Google Translate...');
+        setSubtitleStatus('loading', 'Traduzindo legendas via Google Translate...');
+
+        try {
+          const translateResult = await chrome.runtime.sendMessage({
+            type: MSG.BATCH_TRANSLATE_LINES,
+            entries: subData.zhTrack,
+            sourceLang: 'zh-CN',
+            targetLang: vllState.settings.targetLang
+          });
+          if (isStaleStartup(startupToken)) return;
+
+          if (translateResult && translateResult.entries && translateResult.entries.length > 0) {
+            vllState.ptTrack = translateResult.entries;
+            logger.info(`Google Translate fallback: ${translateResult.entries.length} lines translated`);
+          } else {
+            logger.warn('Google Translate fallback returned no entries');
+          }
+        } catch (err) {
+          logger.warn('Google Translate fallback failed:', err);
+        }
+      }
+
       showLoading(`Processando ${subData.zhTrack.length} legendas...`);
 
       const uniqueWords = getUniqueWordsFromEntries(subData.zhTrack);

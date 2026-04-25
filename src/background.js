@@ -448,6 +448,59 @@ vllLoadDictionary().then(() => {
   console.error('[VLL] Dictionary load error:', err);
 });
 
+/* ── Batch Subtitle Translation (Google Translate fallback) ──── */
+
+const VLL_BATCH_TRANSLATE_CHUNK_SIZE = 25;
+const VLL_BATCH_TRANSLATE_DELAY_MS = 120;
+
+/**
+ * Translate subtitle entries in batches via Google Translate.
+ * Used as fallback when YouTube's timedtext translation API fails (e.g. 429).
+ * Groups multiple lines per request using newline separators.
+ */
+async function vllBatchTranslateLines(entries, sourceLang = 'zh-CN', targetLang = CFG.defaults.targetLang) {
+  if (!Array.isArray(entries) || entries.length === 0) return [];
+
+  const results = [];
+  const total = entries.length;
+
+  for (let i = 0; i < total; i += VLL_BATCH_TRANSLATE_CHUNK_SIZE) {
+    const batch = entries.slice(i, i + VLL_BATCH_TRANSLATE_CHUNK_SIZE);
+    const joined = batch.map(e => (e.text || '').trim()).join('\n');
+
+    try {
+      const translated = await vllTranslateWithGoogle(joined, sourceLang, targetLang);
+      const translatedLines = (translated.translatedText || '').split('\n');
+
+      for (let j = 0; j < batch.length; j++) {
+        results.push({
+          start: batch[j].start,
+          duration: batch[j].duration,
+          text: (translatedLines[j] || '').trim()
+        });
+      }
+    } catch (err) {
+      console.warn(`[VLL] Batch translate chunk ${i}-${i + batch.length} failed:`, err.message);
+      // Push empty entries so indices stay aligned
+      for (let j = 0; j < batch.length; j++) {
+        results.push({
+          start: batch[j].start,
+          duration: batch[j].duration,
+          text: ''
+        });
+      }
+    }
+
+    // Polite delay between batches
+    if (i + VLL_BATCH_TRANSLATE_CHUNK_SIZE < total) {
+      await vllDelay(VLL_BATCH_TRANSLATE_DELAY_MS);
+    }
+  }
+
+  // Filter out entries with empty text
+  return results.filter(e => e.text.length > 0);
+}
+
 /* ── Message Handler ───────────────────────────────────────── */
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -756,6 +809,22 @@ async function handleMessage(msg, sender) {
       } catch (err) {
         console.warn('[VLL] TTS failed:', err.message);
         return { error: err.message || 'Falha ao obter pronuncia' };
+      }
+    }
+
+    /* ── Batch Subtitle Translation ────────────────────────── */
+
+    case MSG.BATCH_TRANSLATE_LINES: {
+      try {
+        const sourceLang = msg.sourceLang || 'zh-CN';
+        const targetLang = msg.targetLang || CFG.defaults.targetLang;
+        console.log(`[VLL] Batch translating ${(msg.entries || []).length} subtitle lines (${sourceLang} → ${targetLang})`);
+        const translated = await vllBatchTranslateLines(msg.entries || [], sourceLang, targetLang);
+        console.log(`[VLL] Batch translation complete: ${translated.length} entries`);
+        return { entries: translated };
+      } catch (err) {
+        console.error('[VLL] Batch translate failed:', err);
+        return { entries: [], error: err.message };
       }
     }
 
