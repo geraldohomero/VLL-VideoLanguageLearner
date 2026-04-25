@@ -13,15 +13,16 @@
 function vllGenerateCSV(words) {
   // UTF-8 BOM for Excel/Anki compatibility
   const BOM = '\ufeff';
-  const header = 'word;pinyin;meaning;color;context';
+  const header = 'word;pinyin;meaning;color;context;wordLang';
 
   const rows = words.map(w => {
     const fields = [
       escapeCSVField(w.word || ''),
       escapeCSVField(w.pinyin || ''),
-      escapeCSVField(w.meaningPt || w.meaning || ''),
+      escapeCSVField(w.customMeaning || w.meaningPt || w.meaning || ''),
       escapeCSVField(w.color || 'white'),
-      escapeCSVField(w.context || '')
+      escapeCSVField(w.context || ''),
+      escapeCSVField(w.wordLang || '')
     ];
     return fields.join(';');
   });
