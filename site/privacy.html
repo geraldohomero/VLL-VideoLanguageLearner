@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Política de Privacidade — VLL (Video Language Learner)</title>
+    <meta name="description" content="Política de privacidade do VLL (Video Language Learner) — Extensão Chrome para aprendizado de Mandarim no YouTube.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="../icons/icon-48.png" type="image/png">
+    <style>
+        .legal-container {
+            max-width: 860px;
+            margin: 60px auto;
+            padding: 40px 30px;
+        }
+        .legal-card {
+            padding: 40px;
+            border-radius: 16px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: var(--glass-shadow);
+        }
+        .legal-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #a78bfa, #f8fafc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .legal-updated {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 15px;
+        }
+        .legal-card h2 {
+            font-size: 1.3rem;
+            margin-top: 28px;
+            margin-bottom: 12px;
+            color: #e2e8f0;
+        }
+        .legal-card p {
+            margin-bottom: 16px;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1.7;
+        }
+        .legal-card ul {
+            margin-left: 20px;
+            margin-bottom: 18px;
+            color: var(--text-secondary);
+        }
+        .legal-card li {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        .legal-card strong {
+            color: #f1f5f9;
+        }
+        .back-nav {
+            margin-bottom: 25px;
+        }
+        .back-link {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.2s ease;
+        }
+        .back-link:hover {
+            color: var(--accent-hover);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <div class="legal-container">
+        <div class="back-nav">
+            <a href="../index.html" class="back-link">← Voltar para o início</a>
+        </div>
+
+        <article class="legal-card">
+            <h1 class="legal-title">Política de Privacidade</h1>
+            <p class="legal-updated">Última atualização: 23 de Agosto de 2026</p>
+
+            <p>O <strong>VLL (Video Language Learner)</strong> é uma extensão de navegador para aprendizado de idiomas que preza e respeita integralmente a privacidade de seus usuários. Esta política descreve de forma transparente nossas práticas relativas aos dados.</p>
+
+            <h2>1. Coleta de Informações Pessoais</h2>
+            <p><strong>O VLL NÃO coleta, armazena, monitora nem transmite nenhuma informação pessoal identificável.</strong></p>
+            <ul>
+                <li><strong>Sem Cadastro ou Contas:</strong> Você não precisa criar uma conta, fornecer nome, e-mail ou senha para usar o VLL.</li>
+                <li><strong>Sem Telemetria ou Rastreamento:</strong> Não utilizamos Google Analytics, cookies de terceiros, identificadores de publicidade ou ferramentas de perfil comportamental.</li>
+                <li><strong>Sem Histórico de Navegação:</strong> A extensão não registra e não transmite para nenhum servidor quais vídeos você assiste ou páginas que você visita.</li>
+            </ul>
+
+            <h2>2. Armazenamento Local de Dados</h2>
+            <p>Todos os dados gerados durante o uso do VLL são mantidos <strong>exclusivamente no armazenamento local do seu próprio navegador</strong>:</p>
+            <ul>
+                <li><strong>Banco de Vocabulário:</strong> Palavras salvas, notas, marcações de cores (vermelho, laranja, verde) e frases de exemplo ficam guardadas via <code>IndexedDB</code> e <code>chrome.storage.local</code>.</li>
+                <li><strong>Configurações de Exibição:</strong> Suas preferências (idioma de tradução, tamanho de fonte das legendas, posição do overlay) são mantidas em <code>chrome.storage.local</code>.</li>
+            </ul>
+            <p>Você possui controle total sobre suas informações: pode exportá-las para backup (JSON/CSV) ou excluí-las a qualquer momento pelo painel lateral ou ao desinstalar a extensão.</p>
+
+            <h2>3. Comunicação de Rede e Serviços Externos</h2>
+            <p>Para o funcionamento das funcionalidades de estudo, a extensão realiza requisições de rede diretas:</p>
+            <ul>
+                <li><strong>YouTube (<code>*.youtube.com</code>):</strong> Para carregar as legendas originais disponibilizadas no vídeo em execução.</li>
+                <li><strong>Google Tradutor / TTS (<code>translate.google.com</code>, <code>translate.googleapis.com</code>):</strong> Utilizado sob demanda quando você solicita áudio de pronúncia nativa ou tradução de termos fora do dicionário local offline (CEDICT). Nenhuma informação de identidade é enviada.</li>
+            </ul>
+
+            <h2>4. Compartilhamento de Dados</h2>
+            <p>O VLL:</p>
+            <ul>
+                <li><strong>NÃO</strong> vende, aluga ou compartilha dados com terceiros ou redes de publicidade.</li>
+                <li><strong>NÃO</strong> utiliza dados para qualquer finalidade externa à experiência de aprendizado.</li>
+                <li><strong>NÃO</strong> realiza análise de crédito ou empréstimos.</li>
+            </ul>
+
+            <h2>5. Código Aberto e Contato</h2>
+            <p>O VLL é um projeto de código aberto. O código completo pode ser auditado e verificado publicamente no GitHub:</p>
+            <p>
+                Repositório: <a href="https://github.com/geraldohomero/VLL-VideoLanguageLearner" target="_blank" rel="noopener noreferrer" style="color: var(--accent-color);">github.com/geraldohomero/VLL-VideoLanguageLearner</a><br>
+                Reportar problemas ou dúvidas: <a href="https://github.com/geraldohomero/VLL-VideoLanguageLearner/issues" target="_blank" rel="noopener noreferrer" style="color: var(--accent-color);">github.com/geraldohomero/VLL-VideoLanguageLearner/issues</a>
+            </p>
+        </article>
+    </div>
+</body>
+</html>

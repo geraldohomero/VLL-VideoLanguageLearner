@@ -1,8 +1,9 @@
 # Generated dictionary (run `node scripts/convert-cedict.js` to rebuild)
 assets/cedict_ts.u8
 
-# Node
+# Node & Build
 node_modules/
+dist/
 
 # OS
 .DS_Store
