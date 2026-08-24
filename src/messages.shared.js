@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 (function initVLLMessagesShared(root, factory) {
   const api = factory();
 

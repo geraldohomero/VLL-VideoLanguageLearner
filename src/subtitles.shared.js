@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 (function initVLLSubtitlesShared(root, factory) {
   const api = factory();
 

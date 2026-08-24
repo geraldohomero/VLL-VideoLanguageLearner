@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 (function initVLLConfigShared(root, factory) {
   const api = factory();
 

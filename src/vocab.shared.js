@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 (function initVLLVocabShared(root, factory) {
   const api = factory();
 

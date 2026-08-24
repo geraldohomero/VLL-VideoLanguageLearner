@@ -121,7 +121,9 @@ const VLL_Subtitles = (() => {
         const key = window.ytcfg.get('INNERTUBE_API_KEY');
         if (key) return key;
       }
-    } catch (_) {}
+    } catch (_) {
+      // Ignore if ytcfg is not accessible
+    }
 
     const scripts = document.querySelectorAll('script');
     for (const s of scripts) {

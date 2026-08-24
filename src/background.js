@@ -822,7 +822,8 @@ async function handleMessage(msg, sender) {
 
     case MSG.GET_PRONUNCIATION: {
       const text = msg.text;
-      const isTraditional = typeof text === 'string' && /[\u4e00-\u9fff]/.test(text) && !!(_vllDict && _vllDict[text] && _vllDict[text].t === text);
+      const entry = typeof text === 'string' && /[\u4e00-\u9fff]/.test(text) ? vllLookupWord(text) : null;
+      const isTraditional = !!(entry && entry.t === text);
       const defaultLang = isTraditional ? 'zh-TW' : 'zh-CN';
       const lang = msg.lang || defaultLang;
       const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${encodeURIComponent(lang)}&client=tw-ob`;
