@@ -440,6 +440,16 @@ footer {
         flex-direction: column;
         width: 100%;
         max-width: 300px;
+        margin-inline: auto;
+    }
+
+    .store-banner {
+        width: 100%;
+        margin-inline: auto;
+    }
+
+    .store-banner-copy {
+        text-align: center;
     }
     
     .btn {
