@@ -2,9 +2,24 @@
 
 ![CI](https://github.com/geraldohomero/VLL-VideoLanguageLearner/actions/workflows/ci.yml/badge.svg)
 
-<p align="center">
-   <img src="icons/icon.png" alt="VLL Icon" width="128" />
-</p>
+<table align="center" width="560">
+   <tr>
+      <td align="center">
+         <a href="https://chromewebstore.google.com/detail/vll-%E2%80%94-video-language-lear/ogpjmaegllcpjnfmifjfnbacgonjakbi">
+            <img src="icons/store-icon-128.png" alt="Chrome Web Store" width="72" />
+            <br />
+            <strong>VLL — Video Language Learner</strong>
+         </a>
+         <br />
+         Aprenda mandarim no YouTube com legendas interativas, Hanzi, Pinyin e tradução.
+         <br /><br />
+         <a href="https://chromewebstore.google.com/detail/vll-%E2%80%94-video-language-lear/ogpjmaegllcpjnfmifjfnbacgonjakbi">
+            <strong>Instalar pela Chrome Web Store ↗</strong>
+         </a>
+      </td>
+   </tr>
+</table>
+
 
 O **Video Language Learner (VLL)** é uma extensão para Google Chrome (Manifest V3) desenvolvida para ajudar estudantes de mandarim a aprenderem o idioma enquanto assistem a vídeos no YouTube. 
 
