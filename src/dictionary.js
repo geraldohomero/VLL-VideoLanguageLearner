@@ -56,7 +56,7 @@ function vllLookupWord(word) {
         hasAnyMatch = true;
         combinedPinyin.push(_vllDict[char].p);
         // Take the first meaning of each char to keep it concise
-        const firstMeaning = _vllDict[char].m.split('/')[0];
+        const firstMeaning = (_vllDict[char].m.split(';')[0] || '').trim();
         combinedMeaning.push(`[${char}] ${firstMeaning}`);
       } else {
         combinedPinyin.push('?');
@@ -83,7 +83,7 @@ function vllSegmentText(text) {
   if (!text || text.trim().length === 0) return [];
 
   try {
-    const segmenter = new Intl.Segmenter('zh', { granularity: 'word' });
+    const segmenter = new Intl.Segmenter(['zh-TW', 'zh-HK', 'zh-Hant', 'zh-Hans', 'zh-CN', 'zh'], { granularity: 'word' });
     const segments = [];
     for (const seg of segmenter.segment(text)) {
       if (seg.isWordLike) {

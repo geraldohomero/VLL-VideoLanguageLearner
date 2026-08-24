@@ -198,6 +198,7 @@
 
       vllState.ptTrack = subData.ptTrack;
       vllState.hasNativePtTrack = !!subData.hasNativePtTrack;
+      vllState.zhMeta = subData.zhMeta || null;
       vllState.segmentCache.clear();
 
       // Fallback: if no Portuguese track (YouTube API may have returned 429),
@@ -211,7 +212,7 @@
           const translateResult = await chrome.runtime.sendMessage({
             type: MSG.BATCH_TRANSLATE_LINES,
             entries: subData.zhTrack,
-            sourceLang: 'zh-CN',
+            sourceLang: subData.zhMeta?.languageCode || 'auto',
             targetLang: vllState.settings.targetLang
           });
           if (isStaleStartup(startupToken)) return;
@@ -279,7 +280,7 @@
       return cached;
     }
 
-    const segmenter = new Intl.Segmenter('zh', { granularity: 'word' });
+    const segmenter = new Intl.Segmenter(['zh-TW', 'zh-HK', 'zh-Hant', 'zh-Hans', 'zh-CN', 'zh'], { granularity: 'word' });
     const tokens = [];
     for (const seg of segmenter.segment(cacheKey)) {
       tokens.push({
@@ -486,7 +487,16 @@
   async function playPronunciation(text) {
     if (!text) return;
     try {
-      const response = await chrome.runtime.sendMessage({ type: MSG.GET_PRONUNCIATION, text: text });
+      const isTaiwan = !!(
+        vllState.zhMeta?.languageCode?.toLowerCase().includes('tw') ||
+        vllState.zhMeta?.languageCode?.toLowerCase().includes('hant') ||
+        vllState.zhMeta?.name?.toLowerCase().includes('taiwan') ||
+        vllState.zhMeta?.name?.toLowerCase().includes('繁') ||
+        vllState.zhMeta?.name?.toLowerCase().includes('臺灣') ||
+        vllState.zhMeta?.name?.toLowerCase().includes('台灣')
+      );
+      const lang = isTaiwan ? 'zh-TW' : 'zh-CN';
+      const response = await chrome.runtime.sendMessage({ type: MSG.GET_PRONUNCIATION, text: text, lang: lang });
       if (response && response.dataUrl) {
         const audio = new Audio(response.dataUrl);
         await audio.play();

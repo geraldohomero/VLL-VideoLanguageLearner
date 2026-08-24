@@ -304,7 +304,7 @@
 
     // Set Google Translate links
     const gtTargetLang = (els.settings.targetLang && els.settings.targetLang.value) || CFG.defaults.targetLang;
-    const gtSourceLang = 'zh-CN';
+    const gtSourceLang = 'auto';
 
     if (els.detail.gtWord) {
       els.detail.gtWord.href = `https://translate.google.com/?sl=${gtSourceLang}&tl=${encodeURIComponent(gtTargetLang)}&text=${encodeURIComponent(wordData.hanzi)}&op=translate`;

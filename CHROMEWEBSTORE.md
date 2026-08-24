@@ -149,6 +149,7 @@ Aviso legal: YouTube™ é uma marca registrada da Google LLC. O VLL é um proje
 | Versão | Data | Principais Mudanças | Status |
 |---|---|---|---|
 | **1.3.9** | 2026-08-23 | • Adequação completa para Manifest V3 na Chrome Web Store<br>• Ícones em resoluções independentes (16, 48, 128)<br>• Remoção de fontes remotas para conformidade offline/CSP<br>• Script automatizado de empacotamento de distribuição | Pronto para Submissão |
+| **1.4.3** | 2026-08-23 | • Atualização de versão para 1.4.3<br>• Pequenos ajustes de performance e correções de bugs menores, Adição de suporte ao Chinês (Taiwan)| Pronto para Submissão |
 
 ---
 

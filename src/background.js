@@ -54,6 +54,36 @@ const CFG = vllConfigShared;
 
 _vllGoogleLookupState.targetLang = CFG.defaults.targetLang;
 
+async function vllEnsureNetRules() {
+  if (typeof chrome !== 'undefined' && chrome.declarativeNetRequest?.updateDynamicRules) {
+    try {
+      await chrome.declarativeNetRequest.updateDynamicRules({
+        removeRuleIds: [1],
+        addRules: [
+          {
+            id: 1,
+            priority: 1,
+            action: {
+              type: 'modifyHeaders',
+              requestHeaders: [
+                { header: 'Origin', operation: 'set', value: 'https://www.youtube.com' },
+                { header: 'Referer', operation: 'set', value: 'https://www.youtube.com/' }
+              ]
+            },
+            condition: {
+              urlFilter: '||youtube.com/youtubei/v1/player*',
+              resourceTypes: ['xmlhttprequest', 'other']
+            }
+          }
+        ]
+      });
+    } catch (e) {
+      console.warn('[VLL] Could not register dynamic net rule:', e.message);
+    }
+  }
+}
+vllEnsureNetRules();
+
 function vllDelay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -183,7 +213,7 @@ async function vllBatchLookupWithGoogle(words, targetLang = 'pt') {
         // Add a small jittered delay between requests to be polite to Google
         await vllDelay(150 + Math.random() * 250);
         
-        const translated = await vllTranslateWithGoogle(word, 'zh-CN', targetLang);
+        const translated = await vllTranslateWithGoogle(word, 'auto', targetLang);
         if (translated.translatedText) {
           dictData[word] = {
             pinyin: translated.romanizedText || '',
@@ -458,7 +488,7 @@ const VLL_BATCH_TRANSLATE_DELAY_MS = 120;
  * Used as fallback when YouTube's timedtext translation API fails (e.g. 429).
  * Groups multiple lines per request using newline separators.
  */
-async function vllBatchTranslateLines(entries, sourceLang = 'zh-CN', targetLang = CFG.defaults.targetLang) {
+async function vllBatchTranslateLines(entries, sourceLang = 'auto', targetLang = CFG.defaults.targetLang) {
   if (!Array.isArray(entries) || entries.length === 0) return [];
 
   const results = [];
@@ -792,7 +822,10 @@ async function handleMessage(msg, sender) {
 
     case MSG.GET_PRONUNCIATION: {
       const text = msg.text;
-      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=zh-CN&client=tw-ob`;
+      const isTraditional = typeof text === 'string' && /[\u4e00-\u9fff]/.test(text) && !!(_vllDict && _vllDict[text] && _vllDict[text].t === text);
+      const defaultLang = isTraditional ? 'zh-TW' : 'zh-CN';
+      const lang = msg.lang || defaultLang;
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${encodeURIComponent(lang)}&client=tw-ob`;
 
       try {
         const response = await vllFetchWithRetry(url, {}, {
@@ -816,7 +849,7 @@ async function handleMessage(msg, sender) {
 
     case MSG.BATCH_TRANSLATE_LINES: {
       try {
-        const sourceLang = msg.sourceLang || 'zh-CN';
+        const sourceLang = msg.sourceLang || 'auto';
         const targetLang = msg.targetLang || CFG.defaults.targetLang;
         console.log(`[VLL] Batch translating ${(msg.entries || []).length} subtitle lines (${sourceLang} → ${targetLang})`);
         const translated = await vllBatchTranslateLines(msg.entries || [], sourceLang, targetLang);
@@ -825,6 +858,65 @@ async function handleMessage(msg, sender) {
       } catch (err) {
         console.error('[VLL] Batch translate failed:', err);
         return { entries: [], error: err.message };
+      }
+    }
+
+    case MSG.FETCH_CAPTION_TRACKS: {
+      const videoId = msg.videoId;
+      if (!videoId) return { tracks: [] };
+      try {
+        console.log(`[VLL] Background fetching caption tracks for video: ${videoId}`);
+        const response = await vllFetchWithRetry('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain'
+          },
+          body: JSON.stringify({
+            context: {
+              client: {
+                clientName: 'ANDROID',
+                clientVersion: '20.10.38',
+                androidSdkVersion: 34
+              }
+            },
+            videoId: videoId
+          })
+        }, {
+          retries: 2,
+          timeoutMs: 8000,
+          backoffMs: 300
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const rawTracks = data?.captions?.playerCaptionsTracklistRenderer?.captionTracks || [];
+          console.log(`[VLL] Background found ${rawTracks.length} caption tracks`);
+          return { tracks: rawTracks };
+        }
+        console.warn(`[VLL] Background player API returned HTTP ${response.status}`);
+        return { tracks: [] };
+      } catch (err) {
+        console.warn('[VLL] Background caption track fetch failed:', err.message);
+        return { tracks: [], error: err.message };
+      }
+    }
+
+    case MSG.FETCH_SUBTITLE_URL: {
+      const url = msg.url;
+      if (!url) return { text: '' };
+      try {
+        const response = await vllFetchWithRetry(url, {}, {
+          retries: 2,
+          timeoutMs: 8000,
+          backoffMs: 300
+        });
+        if (response.ok) {
+          const text = await response.text();
+          return { text };
+        }
+        return { text: '', error: `HTTP ${response.status}` };
+      } catch (err) {
+        return { text: '', error: err.message };
       }
     }
 

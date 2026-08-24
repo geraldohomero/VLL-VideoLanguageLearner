@@ -8,7 +8,7 @@
  * 3. Extract from ytcfg embedded data
  */
 
-/* global chrome, VLL_SubtitlesShared, VLL_NetworkShared, VLL_ConfigShared */
+/* global chrome, VLL_SubtitlesShared, VLL_NetworkShared, VLL_ConfigShared, VLL_MessagesShared */
 
 const VLL_Subtitles = (() => {
 
@@ -35,6 +35,12 @@ const VLL_Subtitles = (() => {
   if (!configShared || !configShared.defaults) {
     throw new Error('[VLL] Missing VLL_ConfigShared. Ensure config.shared.js is loaded first.');
   }
+
+  const messagesShared = (typeof VLL_MessagesShared !== 'undefined' && VLL_MessagesShared)
+    ? VLL_MessagesShared
+    : null;
+
+  const MSG = messagesShared?.types || {};
 
   const CFG = configShared;
 
@@ -109,6 +115,25 @@ const VLL_Subtitles = (() => {
     return shared.parseTracks(tracks);
   }
 
+  function getInnertubeApiKey() {
+    try {
+      if (typeof window !== 'undefined' && window.ytcfg?.get) {
+        const key = window.ytcfg.get('INNERTUBE_API_KEY');
+        if (key) return key;
+      }
+    } catch (_) {}
+
+    const scripts = document.querySelectorAll('script');
+    for (const s of scripts) {
+      const text = s.textContent;
+      if (!text || !text.includes('INNERTUBE_API_KEY')) continue;
+      const match = text.match(/"INNERTUBE_API_KEY":\s*"([^"]+)"/);
+      if (match && match[1]) return match[1];
+    }
+
+    return 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8';
+  }
+
   /**
    * Main extraction: try multiple strategies to find caption tracks.
    */
@@ -116,22 +141,24 @@ const VLL_Subtitles = (() => {
     const videoId = getVideoId();
     if (!videoId) return [];
 
-    // Strategy 1: Fetch via InnerTube API (Android client)
-    // This is crucial because the Web client now requires complex PO Token (n-parameter)
-    // validation which returns 0 bytes if missing. The Android client bypasses this.
+    // Strategy 1: Direct InnerTube Android API (CORS-safe with text/plain)
+    // The Android client returns signed timedtext URLs that download reliably without PO tokens.
     console.log('[VLL] Strategy 1: Fetching via InnerTube API (Android bypass)...');
     try {
-      const response = await fetchWithRetry('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
+      const apiKey = getInnertubeApiKey();
+      const playerUrl = `https://www.youtube.com/youtubei/v1/player?key=${encodeURIComponent(apiKey)}&prettyPrint=false`;
+      const response = await fetchWithRetry(playerUrl, {
         method: 'POST',
+        credentials: 'omit',
         headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'com.google.android.youtube/20.10.38 (Linux; U; Android 14)'
+          'Content-Type': 'text/plain'
         },
         body: JSON.stringify({
           context: {
             client: {
               clientName: 'ANDROID',
-              clientVersion: '20.10.38'
+              clientVersion: '20.10.38',
+              androidSdkVersion: 34
             }
           },
           videoId: videoId
@@ -146,19 +173,37 @@ const VLL_Subtitles = (() => {
         const data = await response.json();
         const tracks = data?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
         if (tracks && tracks.length > 0) {
-          console.log(`[VLL] Found ${tracks.length} tracks via InnerTube API!`);
+          console.log(`[VLL] Found ${tracks.length} tracks via InnerTube Android API!`);
           tracks.forEach(t => t._source = 'android');
           return parseTracks(tracks);
         }
       } else {
-        console.warn(`[VLL] InnerTube API returned HTTP ${response.status}`);
+        console.warn(`[VLL] InnerTube Android API returned HTTP ${response.status}`);
       }
     } catch (e) {
-      console.warn('[VLL] InnerTube API fetch failed:', e.message);
+      console.warn('[VLL] Strategy 1 (InnerTube direct) failed:', e.message);
     }
 
-    // Strategy 2: Parse from current page script tags (Legacy fallback)
-    console.log('[VLL] Strategy 2: Parsing script tags...');
+    // Strategy 2: Fetch via Background Service Worker
+    console.log('[VLL] Strategy 2: Fetching caption tracks via background service worker...');
+    try {
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        const bgRes = await chrome.runtime.sendMessage({
+          type: MSG.FETCH_CAPTION_TRACKS,
+          videoId: videoId
+        });
+        if (bgRes && Array.isArray(bgRes.tracks) && bgRes.tracks.length > 0) {
+          console.log(`[VLL] Found ${bgRes.tracks.length} tracks via background service worker!`);
+          bgRes.tracks.forEach(t => t._source = 'android');
+          return parseTracks(bgRes.tracks);
+        }
+      }
+    } catch (e) {
+      console.warn('[VLL] Strategy 2 (background) failed:', e.message);
+    }
+
+    // Strategy 3: Parse from current page script tags (Legacy fallback)
+    console.log('[VLL] Strategy 3: Parsing script tags...');
     try {
       const scripts = document.querySelectorAll('script');
       for (const script of scripts) {
@@ -173,11 +218,11 @@ const VLL_Subtitles = (() => {
         }
       }
     } catch (e) {
-      console.warn('[VLL] Strategy 2 failed:', e.message);
+      console.warn('[VLL] Strategy 3 failed:', e.message);
     }
 
-    // Strategy 3: Fetch page HTML directly (handles SPA navigation fallback)
-    console.log('[VLL] Strategy 3: Fetching page HTML...');
+    // Strategy 4: Fetch page HTML directly (handles SPA navigation fallback)
+    console.log('[VLL] Strategy 4: Fetching page HTML...');
     try {
       const response = await fetchWithRetry(`https://www.youtube.com/watch?v=${videoId}`, {
         credentials: 'same-origin'
@@ -193,7 +238,7 @@ const VLL_Subtitles = (() => {
         return tracks;
       }
     } catch (e) {
-      console.warn('[VLL] Strategy 3 failed:', e.message);
+      console.warn('[VLL] Strategy 4 failed:', e.message);
     }
 
     return [];
@@ -271,20 +316,17 @@ const VLL_Subtitles = (() => {
    */
   async function fetchSubtitleTrack(baseUrl, langCode, trackName, vssId, source) {
     console.log(`[VLL] Fetching subtitles for [${langCode}]`);
-    console.log(`[VLL] Full baseUrl: ${baseUrl}`);
-
-    // Build URL variations to try. 
-    // IMPORTANT: For Android-sourced tracks, the baseUrl is already signed and complete.
-    // Adding/modifying params will likely break the signature and return 0 bytes.
-    const urlVariations = source === 'android' 
-      ? [baseUrl] 
-      : [
-          buildSubtitleUrl(baseUrl, langCode, trackName, vssId, null),
-          buildSubtitleUrl(baseUrl, langCode, trackName, vssId, 'json3'),
-          buildSubtitleUrl(baseUrl, langCode, trackName, vssId, 'srv3'),
-          buildSubtitleUrl(baseUrl, langCode, trackName, vssId, 'vtt'),
-          baseUrl
-        ];
+    console.log(`[VLL] Full baseUrl: ${baseUrl}`);    // Build URL variations to try.
+    // IMPORTANT: Always try raw baseUrl first to preserve cryptographic URL signatures.
+    const urlVariations = [
+      baseUrl,
+      baseUrl.includes('&fmt=') ? baseUrl : (baseUrl + '&fmt=srv3'),
+      baseUrl.includes('&fmt=') ? baseUrl : (baseUrl + '&fmt=json3'),
+      buildSubtitleUrl(baseUrl, langCode, trackName, vssId, null),
+      buildSubtitleUrl(baseUrl, langCode, trackName, vssId, 'json3'),
+      buildSubtitleUrl(baseUrl, langCode, trackName, vssId, 'srv3'),
+      buildSubtitleUrl(baseUrl, langCode, trackName, vssId, 'vtt')
+    ];
 
     // De-duplicate
     const uniqueUrls = [...new Set(urlVariations)];
@@ -294,10 +336,10 @@ const VLL_Subtitles = (() => {
       console.log(`[VLL] Attempt ${i + 1}/${uniqueUrls.length}: ${fetchUrl.substring(0, 120)}...`);
 
       try {
+        let text = '';
         const headers = {};
-        // Only use Android UA if the track metadata came from the Android bypass
         if (source === 'android') {
-           headers['User-Agent'] = 'com.google.android.youtube/20.10.38 (Linux; U; Android 14)';
+          headers['User-Agent'] = 'com.google.android.youtube/20.10.38 (Linux; U; Android 14)';
         }
 
         const response = await fetchWithRetry(fetchUrl, { headers }, {
@@ -305,16 +347,43 @@ const VLL_Subtitles = (() => {
           timeoutMs: VLL_SUBTITLE_TIMEOUT_MS,
           backoffMs: VLL_SUBTITLE_BACKOFF_MS
         });
-        if (!response.ok) {
+        if (response.ok) {
+          text = await response.text();
+        } else {
           console.warn(`[VLL] HTTP ${response.status}`);
-          continue;
         }
 
-        const text = await response.text();
+        // If direct fetch was empty (0 chars) or failed, try fetching via background service worker
+        if ((!text || text.trim().length === 0) && typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+          try {
+            console.log('[VLL] Direct fetch was empty. Trying fetch via background worker...');
+            const bgRes = await chrome.runtime.sendMessage({
+              type: MSG.FETCH_SUBTITLE_URL,
+              url: fetchUrl
+            });
+            if (bgRes && typeof bgRes.text === 'string' && bgRes.text.length > 0) {
+              text = bgRes.text;
+              console.log(`[VLL] Background worker fetched ${text.length} chars!`);
+            }
+          } catch (e) {
+            console.warn('[VLL] Background subtitle fetch fallback failed:', e.message);
+          }
+        }
+
         console.log(`[VLL] Response: ${text.length} chars`);
 
         if (!text || text.trim().length === 0) {
           console.warn('[VLL] Empty response, trying next...');
+          // If first attempt of a script-based track returned 0 chars, immediately try direct Android bypass
+          if (i === 0 && source !== 'android') {
+            const vid = getVideoId();
+            if (vid) {
+              const androidEntries = await fetchAndroidTrackDirect(vid);
+              if (androidEntries.length > 0) {
+                return androidEntries;
+              }
+            }
+          }
           continue;
         }
 
@@ -341,7 +410,76 @@ const VLL_Subtitles = (() => {
       }
     }
 
+    // Final fallback: try fetching Android track directly
+    if (source !== 'android') {
+      const vid = getVideoId();
+      if (vid) {
+        const androidEntries = await fetchAndroidTrackDirect(vid);
+        if (androidEntries.length > 0) {
+          return androidEntries;
+        }
+      }
+    }
+
     console.error('[VLL] ❌ All subtitle fetch attempts failed');
+    return [];
+  }
+
+  /**
+   * Helper: fetch and parse Android caption track directly for a video.
+   */
+  async function fetchAndroidTrackDirect(videoId) {
+    try {
+      const apiKey = getInnertubeApiKey();
+      const playerUrl = `https://www.youtube.com/youtubei/v1/player?key=${encodeURIComponent(apiKey)}&prettyPrint=false`;
+      console.log(`[VLL] Fetching Android caption tracks directly for video: ${videoId}`);
+      const response = await fetchWithRetry(playerUrl, {
+        method: 'POST',
+        credentials: 'omit',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          context: {
+            client: {
+              clientName: 'ANDROID',
+              clientVersion: '20.10.38',
+              androidSdkVersion: 34
+            }
+          },
+          videoId: videoId
+        })
+      }, {
+        retries: 2,
+        timeoutMs: 8000,
+        backoffMs: 300
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const rawTracks = data?.captions?.playerCaptionsTracklistRenderer?.captionTracks || [];
+        const parsed = parseTracks(rawTracks);
+        const zhTrack = shared.findChineseTrack(parsed);
+        if (zhTrack && zhTrack.baseUrl) {
+          console.log(`[VLL] Found Android track [${zhTrack.languageCode}], fetching timedtext...`);
+          const subRes = await fetchWithRetry(zhTrack.baseUrl, { credentials: 'omit' }, {
+            retries: 2,
+            timeoutMs: 8000,
+            backoffMs: 300
+          });
+          if (subRes.ok) {
+            const xml = await subRes.text();
+            if (xml && xml.trim().length > 0) {
+              const entries = parseXML(xml);
+              if (entries.length > 0) {
+                console.log(`[VLL] ✅ Successfully parsed ${entries.length} entries via direct Android bypass!`);
+                return entries;
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[VLL] fetchAndroidTrackDirect failed:', err.message);
+    }
     return [];
   }
 
@@ -356,6 +494,7 @@ const VLL_Subtitles = (() => {
         url += '&tlang=' + encodeURIComponent(targetLang);
       }
 
+      let text = '';
       const response = await fetchWithRetry(url, {
         headers: {
           'User-Agent': 'com.google.android.youtube/20.10.38 (Linux; U; Android 14)'
@@ -365,9 +504,22 @@ const VLL_Subtitles = (() => {
         timeoutMs: VLL_SUBTITLE_TIMEOUT_MS,
         backoffMs: VLL_SUBTITLE_BACKOFF_MS
       });
-      if (!response.ok) return [];
+      if (response.ok) {
+        text = await response.text();
+      }
 
-      const text = await response.text();
+      if ((!text || text.trim().length === 0) && typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        try {
+          const bgRes = await chrome.runtime.sendMessage({
+            type: MSG.FETCH_SUBTITLE_URL,
+            url: url
+          });
+          if (bgRes && typeof bgRes.text === 'string' && bgRes.text.length > 0) {
+            text = bgRes.text;
+          }
+        } catch (e) { /* ignore */ }
+      }
+
       if (!text || text.trim().length === 0) return [];
 
       // Try XML first
@@ -379,26 +531,6 @@ const VLL_Subtitles = (() => {
       if (jsonData) {
         const jsonEntries = parseJSON3(jsonData);
         if (jsonEntries.length > 0) return jsonEntries;
-      }
-
-      // Try JSON3 format explicitly
-      let url2 = url.replace(/&fmt=[^&]*/g, '').replace(/\?fmt=[^&]*&/, '?') + '&fmt=json3';
-      const response2 = await fetchWithRetry(url2, {
-        headers: {
-          'User-Agent': 'com.google.android.youtube/20.10.38 (Linux; U; Android 14)'
-        }
-      }, {
-        retries: VLL_SUBTITLE_RETRIES,
-        timeoutMs: VLL_SUBTITLE_TIMEOUT_MS,
-        backoffMs: VLL_SUBTITLE_BACKOFF_MS
-      });
-      if (response2.ok) {
-        const text2 = await response2.text();
-        const data2 = safeJSONParse(text2);
-        if (data2) {
-          const entries = parseJSON3(data2);
-          if (entries.length > 0) return entries;
-        }
       }
 
       return [];
@@ -462,6 +594,7 @@ const VLL_Subtitles = (() => {
 
     return {
       zhTrack,
+      zhMeta,
       ptTrack,
       hasNativePtTrack,
       tracks,

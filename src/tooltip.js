@@ -117,7 +117,7 @@
     const gtLinks = document.createElement('div');
     gtLinks.className = 'vll-gt-links';
 
-    const sourceLang = wordData.meaningLang === targetLang ? 'auto' : 'zh-CN';
+    const sourceLang = 'auto';
 
     const gtWordBtn = document.createElement('a');
     gtWordBtn.className = 'vll-gt-link';
