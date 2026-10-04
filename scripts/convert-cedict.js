@@ -15,7 +15,6 @@ const zlib = require('zlib');
 
 const CEDICT_URL = 'https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.txt.gz';
 const OUTPUT_DIR = path.join(__dirname, '..', 'assets');
-const OUTPUT_FILE = path.join(OUTPUT_DIR, 'dictionary.json');
 const RAW_FILE = path.join(OUTPUT_DIR, 'cedict_ts.u8');
 
 /* ── Tone number → accent conversion ─────────────────────── */

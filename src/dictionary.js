@@ -42,7 +42,9 @@ async function vllLoadDictionary() {
           console.log(`[VLL] Dictionary fallback loaded: ${Object.keys(_vllDict).length} entries`);
           return _vllDict;
         }
-      } catch (_) {}
+      } catch (_) {
+        // Ignore fallback error
+      }
 
       console.error('[VLL] Failed to load dictionary:', err);
       _vllDict = {};

@@ -4,6 +4,7 @@ assets/cedict_ts.u8
 # Node & Build
 node_modules/
 dist/
+_metadata/
 
 # OS
 .DS_Store

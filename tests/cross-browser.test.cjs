@@ -30,7 +30,7 @@ test('background.js can execute in Firefox environment without chrome.sidePanel 
     'src/background.js'
   ];
 
-  let sidebarActionOpened = false;
+  let _sidebarActionOpened = false;
 
   const sandbox = {
     console: {
@@ -67,7 +67,7 @@ test('background.js can execute in Firefox environment without chrome.sidePanel 
         }
       },
       sidebarAction: {
-        open: async () => { sidebarActionOpened = true; },
+        open: async () => { _sidebarActionOpened = true; },
         close: async () => {},
         toggle: async () => {}
       }

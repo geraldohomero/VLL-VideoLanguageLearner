@@ -3,7 +3,7 @@ const js = require("@eslint/js");
 module.exports = [
   // Ignore generated and auxiliary folders from lint scope.
   {
-    ignores: ["node_modules/**", "scratch/**", "site/**", "eslint.config.js"]
+    ignores: ["node_modules/**", "scratch/**", "site/**", "dist/**", "_metadata/**", "eslint.config.js"]
   },
   js.configs.recommended,
 
@@ -57,6 +57,7 @@ module.exports = [
       sourceType: "script",
       globals: {
         chrome: "readonly",
+        browser: "readonly",
         window: "readonly",
         document: "readonly",
         console: "readonly",
@@ -78,6 +79,7 @@ module.exports = [
         VLL_NetworkShared: "readonly",
         VLL_MessagesShared: "readonly",
         VLL_ConfigShared: "readonly",
+        VLL_SubtitlesShared: "readonly",
         VLL_Subtitles: "readonly",
         vllLoadDictionary: "readonly",
         vllBatchLookup: "readonly",
