@@ -24,17 +24,15 @@
          </a>
       </td>
       <td align="center" width="50%">
-         <a href="#">
+         <a href="https://addons.mozilla.org/pt-BR/firefox/addon/vll-video-language-learner/">
             <img src="assets/img/firefox.png" alt="Mozilla Firefox" width="56" />
             <br />
             <strong>Mozilla Firefox</strong>
          </a>
          <br /><br />
-         <a href="#">
+         <a href="https://addons.mozilla.org/pt-BR/firefox/addon/vll-video-language-learner/">
             <strong>Instalar no Firefox Add-ons ↗</strong>
          </a>
-         <br />
-         <sub><em>(Em breve)</em></sub>
       </td>
    </tr>
 </table>

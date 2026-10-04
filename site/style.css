@@ -167,37 +167,73 @@ body {
     animation: fadeIn 1s ease-out 0.4s both;
 }
 
+.store-banners-container {
+    display: flex;
+    gap: 16px;
+    width: min(100%, 720px);
+    margin: 0 auto 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeIn 1s ease-out 0.55s both;
+}
+
 .store-banner {
-    width: min(100%, 560px);
+    flex: 1 1 300px;
+    max-width: 340px;
     display: flex;
     align-items: center;
     gap: 14px;
-    margin: 0 auto 24px;
+    margin: 0;
     padding: 16px 18px;
     color: var(--text-primary);
     text-align: left;
     text-decoration: none;
     background: linear-gradient(105deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.72));
-    border: 1px solid rgba(56, 189, 248, 0.38);
-    border-left: 4px solid #38bdf8;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
-    box-shadow: 0 12px 30px rgba(2, 132, 199, 0.16);
-    animation: fadeIn 1s ease-out 0.55s both;
     transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .store-banner:hover {
     transform: translateY(-3px);
+}
+
+.store-banner-chrome {
+    border-color: rgba(56, 189, 248, 0.38);
+    border-left: 4px solid #38bdf8;
+    box-shadow: 0 12px 30px rgba(2, 132, 199, 0.16);
+}
+
+.store-banner-chrome:hover {
     border-color: #38bdf8;
     box-shadow: 0 16px 34px rgba(2, 132, 199, 0.25);
 }
 
+.store-banner-chrome .store-banner-arrow {
+    color: #7dd3fc;
+}
+
+.store-banner-firefox {
+    border-color: rgba(255, 113, 57, 0.38);
+    border-left: 4px solid #ff7139;
+    box-shadow: 0 12px 30px rgba(255, 113, 57, 0.16);
+}
+
+.store-banner-firefox:hover {
+    border-color: #ff7139;
+    box-shadow: 0 16px 34px rgba(255, 113, 57, 0.25);
+}
+
+.store-banner-firefox .store-banner-arrow {
+    color: #ff9466;
+}
+
 .store-banner-mark {
-    width: 34px;
-    height: 34px;
-    flex: 0 0 34px;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
     border-radius: 8px;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 .store-banner-copy {
@@ -218,7 +254,6 @@ body {
 }
 
 .store-banner-arrow {
-    color: #7dd3fc;
     font-size: 1.3rem;
 }
 
