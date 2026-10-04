@@ -65,7 +65,9 @@ function packageForTarget(browserTarget) {
   }
   fs.mkdirSync(tmpDir, { recursive: true });
 
-  const filter = (srcPath) => !srcPath.includes(path.join('assets', 'img'));
+  const filter = (srcPath) =>
+    !srcPath.includes(path.join('assets', 'img')) &&
+    !srcPath.endsWith(path.join('assets', 'dictionary.json'));
 
   try {
     for (const item of filesAndDirsToInclude) {

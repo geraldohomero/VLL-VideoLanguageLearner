@@ -7,10 +7,13 @@
 let _vllDict = null;
 let _vllDictLoading = null;
 
+const VLL_DICT_CHUNK_COUNT = 6;
+const VLL_DICT_CHUNKS = Array.from({ length: VLL_DICT_CHUNK_COUNT }, (_, i) => `assets/dictionary_${i}.json`);
+
 /**
- * Load the CC-CEDICT dictionary JSON into memory.
- * Called once when the service worker starts.
- * ~120k entries, ~4MB in memory.
+ * Load the CC-CEDICT dictionary into memory.
+ * Uses 6 split JSON chunks (<5MB each) to comply with AMO limits.
+ * Called once when the service worker/background starts.
  */
 async function vllLoadDictionary() {
   if (_vllDict) return _vllDict;
@@ -18,12 +21,29 @@ async function vllLoadDictionary() {
 
   _vllDictLoading = (async () => {
     try {
-      const url = chrome.runtime.getURL('assets/dictionary.json');
-      const res = await fetch(url);
-      _vllDict = await res.json();
+      const chunkPromises = VLL_DICT_CHUNKS.map(async (chunkPath) => {
+        const url = chrome.runtime.getURL(chunkPath);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status} for ${chunkPath}`);
+        return res.json();
+      });
+
+      const parts = await Promise.all(chunkPromises);
+      _vllDict = Object.assign({}, ...parts);
       console.log(`[VLL] Dictionary loaded: ${Object.keys(_vllDict).length} entries`);
       return _vllDict;
     } catch (err) {
+      // Fallback: try monolithic dictionary.json if chunks fail
+      try {
+        const fallbackUrl = chrome.runtime.getURL('assets/dictionary.json');
+        const res = await fetch(fallbackUrl);
+        if (res.ok) {
+          _vllDict = await res.json();
+          console.log(`[VLL] Dictionary fallback loaded: ${Object.keys(_vllDict).length} entries`);
+          return _vllDict;
+        }
+      } catch (_) {}
+
       console.error('[VLL] Failed to load dictionary:', err);
       _vllDict = {};
       return _vllDict;

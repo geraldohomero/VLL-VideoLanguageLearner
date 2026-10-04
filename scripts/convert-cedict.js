@@ -195,11 +195,16 @@ async function main() {
   const { dict, count } = parseCedict(rawText);
   console.log(`✅ Parsed ${count.toLocaleString()} entries`);
 
-  // Write JSON
-  const jsonStr = JSON.stringify(dict);
-  fs.writeFileSync(OUTPUT_FILE, jsonStr, 'utf-8');
-  const sizeMB = (Buffer.byteLength(jsonStr) / 1024 / 1024).toFixed(1);
-  console.log(`💾 Saved to ${OUTPUT_FILE} (${sizeMB} MB)`);
+  // Write split JSON chunks (<5MB each to respect AMO limits)
+  const entries = Object.entries(dict);
+  const numChunks = 6;
+  const chunkSize = Math.ceil(entries.length / numChunks);
+  for (let i = 0; i < numChunks; i++) {
+    const chunkObj = Object.fromEntries(entries.slice(i * chunkSize, (i + 1) * chunkSize));
+    const chunkFile = path.join(OUTPUT_DIR, `dictionary_${i}.json`);
+    fs.writeFileSync(chunkFile, JSON.stringify(chunkObj), 'utf-8');
+  }
+  console.log(`💾 Saved ${numChunks} dictionary chunks to ${OUTPUT_DIR}/dictionary_*.json`);
 
   // Quick test
   console.log('\n🧪 Quick test:');

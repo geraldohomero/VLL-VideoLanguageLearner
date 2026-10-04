@@ -74,10 +74,40 @@ test('package manifest transforms target manifests properly for Chrome and Firef
 
   const firefoxManifest = buildFirefoxManifest(baseManifest);
   assert.ok(firefoxManifest.browser_specific_settings?.gecko?.id, 'Firefox manifest retains gecko id');
+  assert.deepEqual(
+    firefoxManifest.browser_specific_settings?.gecko?.data_collection_permissions,
+    { required: ['none'] },
+    'Firefox manifest must define data_collection_permissions: { required: ["none"] }'
+  );
   assert.ok(firefoxManifest.sidebar_action, 'Firefox manifest retains sidebar_action');
   assert.equal(firefoxManifest.side_panel, undefined, 'Firefox manifest should not include side_panel');
   assert.ok(!firefoxManifest.permissions.includes('sidePanel'), 'Firefox manifest should not include sidePanel permission');
   assert.ok(Array.isArray(firefoxManifest.background.scripts), 'Firefox manifest retains background.scripts');
   assert.equal(firefoxManifest.background.service_worker, undefined, 'Firefox manifest should not include service_worker');
+});
+
+test('manifest.json specifies data_collection_permissions required for Firefox AMO', () => {
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  assert.deepEqual(
+    manifest.browser_specific_settings?.gecko?.data_collection_permissions,
+    { required: ['none'] },
+    'Gecko settings must include data_collection_permissions with required ["none"]'
+  );
+});
+
+test('all assets in assets/ are strictly under 5MB for AMO compliance', () => {
+  const assetsDir = path.join(rootDir, 'assets');
+  const files = fs.readdirSync(assetsDir);
+  for (const file of files) {
+    const filePath = path.join(assetsDir, file);
+    const stat = fs.statSync(filePath);
+    if (stat.isFile()) {
+      const sizeMB = stat.size / (1024 * 1024);
+      assert.ok(
+        sizeMB < 5.0,
+        `File ${file} (${sizeMB.toFixed(2)} MB) must be strictly under 5MB for Mozilla AMO`
+      );
+    }
+  }
 });
 
