@@ -40,12 +40,13 @@ const filesAndDirsToInclude = [
   'src'
 ];
 
-function copyRecursive(src, dest) {
+function copyRecursive(src, dest, filter) {
+  if (filter && !filter(src)) return;
   const stats = fs.statSync(src);
   if (stats.isDirectory()) {
     if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
     for (const child of fs.readdirSync(src)) {
-      copyRecursive(path.join(src, child), path.join(dest, child));
+      copyRecursive(path.join(src, child), path.join(dest, child), filter);
     }
   } else {
     fs.copyFileSync(src, dest);
@@ -64,11 +65,13 @@ function packageForTarget(browserTarget) {
   }
   fs.mkdirSync(tmpDir, { recursive: true });
 
+  const filter = (srcPath) => !srcPath.includes(path.join('assets', 'img'));
+
   try {
     for (const item of filesAndDirsToInclude) {
       const srcPath = path.join(rootDir, item);
       if (fs.existsSync(srcPath)) {
-        copyRecursive(srcPath, path.join(tmpDir, item));
+        copyRecursive(srcPath, path.join(tmpDir, item), filter);
       }
     }
 
