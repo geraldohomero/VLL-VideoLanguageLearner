@@ -2,10 +2,12 @@
  * VLL Service Worker (Background Script)
  * Central hub: loads dictionary, handles IndexedDB, routes messages.
  *
- * Manifest V3 — no ES modules, uses importScripts().
+ * Manifest V3 — supports Chrome Service Worker and Firefox background scripts.
  */
 
-importScripts('logger.shared.js', 'messages.shared.js', 'config.shared.js', 'network.shared.js', 'database.js', 'dictionary.js', 'export.js');
+if (typeof importScripts === 'function') {
+  importScripts('logger.shared.js', 'messages.shared.js', 'config.shared.js', 'network.shared.js', 'database.js', 'dictionary.js', 'export.js');
+}
 
 const VLL_GOOGLE_LOOKUP_CONCURRENCY = 10;
 const VLL_TRANSLATE_TIMEOUT_MS = 7000;
@@ -54,10 +56,13 @@ const CFG = vllConfigShared;
 
 _vllGoogleLookupState.targetLang = CFG.defaults.targetLang;
 
+const vllBrowser = (typeof browser !== 'undefined' && browser.runtime) ? browser : chrome;
+
 async function vllEnsureNetRules() {
-  if (typeof chrome !== 'undefined' && chrome.declarativeNetRequest?.updateDynamicRules) {
+  const dnr = vllBrowser?.declarativeNetRequest || (typeof chrome !== 'undefined' ? chrome.declarativeNetRequest : null);
+  if (dnr?.updateDynamicRules) {
     try {
-      await chrome.declarativeNetRequest.updateDynamicRules({
+      await dnr.updateDynamicRules({
         removeRuleIds: [1],
         addRules: [
           {
@@ -716,7 +721,17 @@ async function handleMessage(msg, sender) {
 
     case MSG.OPEN_SIDEPANEL: {
       const tabId = vllResolveTargetTabId(msg, sender);
-      if (tabId !== null) {
+      if (typeof browser !== 'undefined' && browser.sidebarAction?.open) {
+        try {
+          await browser.sidebarAction.open();
+          if (tabId !== null) _vllSidepanelOpenTabs.add(tabId);
+          return { ok: true };
+        } catch (err) {
+          console.warn('[VLL] browser.sidebarAction.open failed:', err.message);
+        }
+      }
+
+      if (typeof chrome !== 'undefined' && chrome.sidePanel?.open && tabId !== null) {
         chrome.sidePanel.setOptions({
           tabId,
           enabled: true,
@@ -730,6 +745,30 @@ async function handleMessage(msg, sender) {
 
     case MSG.TOGGLE_SIDEPANEL: {
       const tabId = vllResolveTargetTabId(msg, sender);
+      if (typeof browser !== 'undefined' && browser.sidebarAction) {
+        try {
+          if (typeof browser.sidebarAction.toggle === 'function') {
+            await browser.sidebarAction.toggle();
+            return { ok: true };
+          }
+          if (typeof browser.sidebarAction.isOpen === 'function') {
+            const isOpen = await browser.sidebarAction.isOpen({});
+            if (isOpen && typeof browser.sidebarAction.close === 'function') {
+              await browser.sidebarAction.close();
+            } else if (typeof browser.sidebarAction.open === 'function') {
+              await browser.sidebarAction.open();
+            }
+            return { ok: true };
+          }
+          if (typeof browser.sidebarAction.open === 'function') {
+            await browser.sidebarAction.open();
+            return { ok: true };
+          }
+        } catch (err) {
+          console.warn('[VLL] browser.sidebarAction toggle failed:', err.message);
+        }
+      }
+
       if (tabId === null) return { ok: false };
       const isOpen = _vllSidepanelOpenTabs.has(tabId);
 
@@ -738,18 +777,31 @@ async function handleMessage(msg, sender) {
         return { ok: true, open: false };
       }
 
-      chrome.sidePanel.setOptions({
-        tabId,
-        enabled: true,
-        path: 'src/sidepanel.html'
-      }).catch(() => {});
-      await chrome.sidePanel.open({ tabId });
-      _vllSidepanelOpenTabs.add(tabId);
-      return { ok: true, open: true };
+      if (typeof chrome !== 'undefined' && chrome.sidePanel?.open) {
+        chrome.sidePanel.setOptions({
+          tabId,
+          enabled: true,
+          path: 'src/sidepanel.html'
+        }).catch(() => {});
+        await chrome.sidePanel.open({ tabId });
+        _vllSidepanelOpenTabs.add(tabId);
+        return { ok: true, open: true };
+      }
+      return { ok: false };
     }
 
     case MSG.CLOSE_SIDEPANEL: {
       const tabId = vllResolveTargetTabId(msg, sender);
+      if (typeof browser !== 'undefined' && browser.sidebarAction?.close) {
+        try {
+          await browser.sidebarAction.close();
+          if (tabId !== null) _vllSidepanelOpenTabs.delete(tabId);
+          return { ok: true, open: false };
+        } catch (err) {
+          console.warn('[VLL] browser.sidebarAction.close failed:', err.message);
+        }
+      }
+
       if (tabId === null) return { ok: false };
       await vllCloseSidepanel(tabId);
       return { ok: true, open: false };
@@ -938,21 +990,27 @@ function vllResolveTargetTabId(msg, sender) {
 }
 
 async function vllCloseSidepanel(tabId) {
-  await chrome.sidePanel.setOptions({ tabId, enabled: false });
+  if (typeof chrome !== 'undefined' && chrome.sidePanel?.setOptions) {
+    await chrome.sidePanel.setOptions({ tabId, enabled: false }).catch(() => {});
+  }
   _vllSidepanelOpenTabs.delete(tabId);
 }
 
 /* ── Side Panel Context ────────────────────────────────────── */
 
-// Enable side panel for YouTube tabs
-chrome.sidePanel.setOptions({
-  enabled: true
-}).catch(() => {});
+// Enable side panel for YouTube tabs (Chrome only)
+if (typeof chrome !== 'undefined' && chrome.sidePanel?.setOptions) {
+  chrome.sidePanel.setOptions({
+    enabled: true
+  }).catch(() => {});
+}
 
-// Set side panel behavior — open on action click
-chrome.sidePanel.setPanelBehavior({
-  openPanelOnActionClick: false
-}).catch(() => {});
+// Set side panel behavior — open on action click (Chrome only)
+if (typeof chrome !== 'undefined' && chrome.sidePanel?.setPanelBehavior) {
+  chrome.sidePanel.setPanelBehavior({
+    openPanelOnActionClick: false
+  }).catch(() => {});
+}
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   _vllSidepanelOpenTabs.delete(tabId);

@@ -76,6 +76,11 @@
 
   async function openSidepanel() {
     try {
+      if (typeof browser !== 'undefined' && browser.sidebarAction?.open) {
+        await browser.sidebarAction.open();
+        window.close();
+        return;
+      }
       const tabId = await getActiveTabId();
       if (tabId === null) return;
       await chrome.runtime.sendMessage({ type: MSG.OPEN_SIDEPANEL, tabId });
@@ -86,6 +91,11 @@
 
   async function closeSidepanel() {
     try {
+      if (typeof browser !== 'undefined' && browser.sidebarAction?.close) {
+        await browser.sidebarAction.close();
+        window.close();
+        return;
+      }
       const tabId = await getActiveTabId();
       if (tabId === null) return;
       await chrome.runtime.sendMessage({ type: MSG.CLOSE_SIDEPANEL, tabId });

@@ -4,7 +4,7 @@
  * word hover tooltips, and color-coded vocabulary tracking.
  */
 
-/* global chrome, VLL_Subtitles, VLL_MessagesShared, VLL_ConfigShared, VLL_VocabShared, VLL_Logger, VLL_Overlay, VLL_Tooltip */
+/* global chrome, VLL_Subtitles, VLL_SubtitlesShared, VLL_MessagesShared, VLL_ConfigShared, VLL_VocabShared, VLL_Logger, VLL_Overlay, VLL_Tooltip */
 
 (() => {
   'use strict';
@@ -13,6 +13,7 @@
   const MSG = VLL_MessagesShared.types;
   const CFG = VLL_ConfigShared;
   const VOCAB = VLL_VocabShared;
+  const SUBTITLES_SHARED = (typeof VLL_SubtitlesShared !== 'undefined' && VLL_SubtitlesShared) ? VLL_SubtitlesShared : null;
 
   const DEFAULT_OVERLAY_STYLE = {
     fontScale: CFG.defaults.overlayStyle?.fontScale ?? 1,
@@ -280,13 +281,18 @@
       return cached;
     }
 
-    const segmenter = new Intl.Segmenter(['zh-TW', 'zh-HK', 'zh-Hant', 'zh-Hans', 'zh-CN', 'zh'], { granularity: 'word' });
-    const tokens = [];
-    for (const seg of segmenter.segment(cacheKey)) {
-      tokens.push({
-        hanzi: seg.segment,
-        isWord: !!seg.isWordLike
-      });
+    let tokens;
+    if (SUBTITLES_SHARED && typeof SUBTITLES_SHARED.segmentText === 'function') {
+      tokens = SUBTITLES_SHARED.segmentText(cacheKey);
+    } else {
+      const segmenter = new Intl.Segmenter(['zh-TW', 'zh-HK', 'zh-Hant', 'zh-Hans', 'zh-CN', 'zh'], { granularity: 'word' });
+      tokens = [];
+      for (const seg of segmenter.segment(cacheKey)) {
+        tokens.push({
+          hanzi: seg.segment,
+          isWord: !!seg.isWordLike
+        });
+      }
     }
 
     vllState.segmentCache.set(cacheKey, tokens);

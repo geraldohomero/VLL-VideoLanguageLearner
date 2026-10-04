@@ -2,26 +2,45 @@
 
 ![CI](https://github.com/geraldohomero/VLL-VideoLanguageLearner/actions/workflows/ci.yml/badge.svg)
 
-<table align="center" width="560">
+<p align="center">
+   <img src="icons/icon-128.png" alt="VLL Logo" width="72" />
+   <br />
+   <strong>VLL — Video Language Learner</strong>
+   <br />
+   Aprenda mandarim no YouTube com legendas interativas, Hanzi, Pinyin e tradução.
+</p>
+
+<table align="center" width="600">
    <tr>
-      <td align="center">
+      <td align="center" width="50%">
          <a href="https://chromewebstore.google.com/detail/vll-%E2%80%94-video-language-lear/ogpjmaegllcpjnfmifjfnbacgonjakbi">
-            <img src="icons/store-icon-128.png" alt="Chrome Web Store" width="72" />
+            <img src="assets/img/chrome.png" alt="Google Chrome" width="56" />
             <br />
-            <strong>VLL — Video Language Learner</strong>
+            <strong>Google Chrome</strong>
          </a>
-         <br />
-         Aprenda mandarim no YouTube com legendas interativas, Hanzi, Pinyin e tradução.
          <br /><br />
          <a href="https://chromewebstore.google.com/detail/vll-%E2%80%94-video-language-lear/ogpjmaegllcpjnfmifjfnbacgonjakbi">
-            <strong>Instalar pela Chrome Web Store ↗</strong>
+            <strong>Instalar na Chrome Web Store ↗</strong>
          </a>
+      </td>
+      <td align="center" width="50%">
+         <a href="#">
+            <img src="assets/img/firefox.png" alt="Mozilla Firefox" width="56" />
+            <br />
+            <strong>Mozilla Firefox</strong>
+         </a>
+         <br /><br />
+         <a href="#">
+            <strong>Instalar no Firefox Add-ons ↗</strong>
+         </a>
+         <br />
+         <sub><em>(Em breve)</em></sub>
       </td>
    </tr>
 </table>
 
 
-O **Video Language Learner (VLL)** é uma extensão para Google Chrome (Manifest V3) desenvolvida para ajudar estudantes de mandarim a aprenderem o idioma enquanto assistem a vídeos no YouTube. 
+O **Video Language Learner (VLL)** é uma extensão para **Google Chrome** e **Mozilla Firefox** (Manifest V3) desenvolvida para ajudar estudantes de mandarim a aprenderem o idioma enquanto assistem a vídeos no YouTube. 
 
 > Inicialmente projetado para falantes de Português(BR) aprenderem Chinês (Mandarim), mas poderá ser adaptado para outros idiomas no futuro
 
@@ -63,24 +82,36 @@ A extensão aprimora a experiência de visualização adicionando legendas inter
 
 Como a extensão ainda está em desenvolvimento, você pode instalá-la manualmente no seu navegador:
 
-Passo a passo:
+### No Google Chrome / Navegadores Chromium
 
-1. [Download do arquivo zip](https://github.com/geraldohomero/VLL-VideoLanguageLearner/releases) e extraia o conteúdo do arquivo zip para uma pasta no seu computador (por exemplo, `VLL`).
-
-2. Abra o Google Chrome e acesse a página de extensões pelo endereço:
+1. Abra o navegador e acesse a página de extensões pelo endereço:
 
 ```text
 chrome://extensions/
 ```
 
-3. Ative a opção **Modo do desenvolvedor** (chave no canto superior direito).
-4. Clique no botão **Carregar sem compactação** (ou *Load unpacked*).
-5. Selecione a pasta raiz do projeto `VLL` no seu computador.
-6. Pronto! A extensão estará instalada. Fixe-a na barra de extensões para facilitar o acesso.
+2. Ative a opção **Modo do desenvolvedor** (chave no canto superior direito).
+3. Clique no botão **Carregar sem compactação** (ou *Load unpacked*).
+4. Selecione a pasta raiz do projeto no seu computador.
+5. Pronto! A extensão estará instalada.
 
 ![gif](assets/img/guide.gif)
 
 ![alt text](assets/img/image-1-Install.png)
+
+### No Mozilla Firefox
+
+1. Abra o Firefox e acesse a página de depuração:
+
+```text
+about:debugging#/runtime/this-firefox
+```
+
+2. Clique no botão **Carregar extensão temporária...** (ou *Load Temporary Add-on...*).
+3. Selecione o arquivo `.zip` em `dist/vll-video-language-learner-firefox-v1.5.0.zip` ou o `manifest.json` da pasta `dist/firefox/` (gerada via `npm run package:firefox` — sem avisos de compatibilidade com o Chrome). Você também pode carregar diretamente o `manifest.json` da raiz para desenvolvimento.
+4. Pronto! A extensão estará instalada com suporte total à barra lateral (*Sidebar*) e controles.
+
+
 
 ## Como Usar
 
@@ -101,7 +132,7 @@ chrome://extensions/
 ## Tecnologias Utilizadas
 
 - **HTML, CSS e JavaScript (Vanilla)**
-- **Chrome Extensions API:** Manipulação do DOM (`content_scripts`), processos em segundo plano (`service_worker`) e painel lateral (`side_panel`).
+- **WebExtensions API (Chrome & Firefox):** Manipulação do DOM (`content_scripts`), processos em segundo plano (`service_worker` / `background scripts`) e painel lateral (`side_panel` / `sidebar_action`).
 
 ## Documentação
 

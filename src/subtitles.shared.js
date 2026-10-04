@@ -309,6 +309,72 @@
     return entries.filter(e => e.text.length > 0);
   }
 
+  const CJK_IDEOGRAPH_REGEX = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]|[\uD840-\uD87A][\uDC00-\uDFFF]/;
+  const PUNCT_OR_SPACE_CHAR_REGEX = /[\s\p{P}\p{S}]/u;
+  const PUNCT_OR_SPACE_ALL_REGEX = /^[\s\p{P}\p{S}]+$/u;
+  const PUNCT_OR_SPACE_SPLIT_REGEX = /([\s\p{P}\p{S}]+|[^\s\p{P}\p{S}]+)/gu;
+
+  function segmentText(text) {
+    if (!text || typeof text !== 'string') return [];
+
+    let rawSegments = [];
+    if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
+      try {
+        const segmenter = new Intl.Segmenter(['zh-TW', 'zh-HK', 'zh-Hant', 'zh-Hans', 'zh-CN', 'zh'], { granularity: 'word' });
+        for (const seg of segmenter.segment(text)) {
+          rawSegments.push({
+            segment: seg.segment,
+            isWordLike: !!seg.isWordLike
+          });
+        }
+      } catch {
+        // Fallback below
+      }
+    }
+
+    if (rawSegments.length === 0) {
+      const parts = text.match(/([\s\p{P}\p{S}]+|[^\s\p{P}\p{S}])/gu) || text.split('');
+      for (const part of parts) {
+        rawSegments.push({
+          segment: part,
+          isWordLike: !PUNCT_OR_SPACE_ALL_REGEX.test(part)
+        });
+      }
+    }
+
+    const tokens = [];
+    for (const raw of rawSegments) {
+      const segText = raw.segment;
+      if (!segText) continue;
+
+      if (PUNCT_OR_SPACE_ALL_REGEX.test(segText)) {
+        tokens.push({ hanzi: segText, isWord: false });
+        continue;
+      }
+
+      if (!PUNCT_OR_SPACE_CHAR_REGEX.test(segText)) {
+        const isWord = CJK_IDEOGRAPH_REGEX.test(segText) || raw.isWordLike;
+        tokens.push({ hanzi: segText, isWord });
+        continue;
+      }
+
+      PUNCT_OR_SPACE_SPLIT_REGEX.lastIndex = 0;
+      let match;
+      while ((match = PUNCT_OR_SPACE_SPLIT_REGEX.exec(segText)) !== null) {
+        const part = match[0];
+        if (!part) continue;
+        if (PUNCT_OR_SPACE_ALL_REGEX.test(part)) {
+          tokens.push({ hanzi: part, isWord: false });
+        } else {
+          const isWord = CJK_IDEOGRAPH_REGEX.test(part) || raw.isWordLike;
+          tokens.push({ hanzi: part, isWord });
+        }
+      }
+    }
+
+    return tokens;
+  }
+
   return {
     buildSubtitleUrl,
     matchTranslation,
@@ -321,6 +387,7 @@
     findPortugueseBRTrack,
     safeJSONParse,
     parseJSON3,
-    parseXML
+    parseXML,
+    segmentText
   };
 });

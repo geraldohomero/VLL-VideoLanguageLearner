@@ -173,3 +173,35 @@ test('extractTracksFromHTML finds tracks in ytInitialPlayerResponse', () => {
   assert.equal(tracks.length, 1);
   assert.equal(tracks[0].languageCode, 'zh');
 });
+
+test('segmentText separates Chinese words from punctuation marks', () => {
+  const tokens = shared.segmentText('这是真的吗？');
+  assert.ok(Array.isArray(tokens));
+
+  const words = tokens.filter(t => t.isWord).map(t => t.hanzi);
+  const puncts = tokens.filter(t => !t.isWord).map(t => t.hanzi);
+
+  assert.ok(words.includes('吗'), 'The final particle 吗 before punctuation must be marked as a word');
+  assert.deepEqual(puncts, ['？'], 'Punctuation mark ？ must be separate and marked as not a word');
+});
+
+test('segmentText handles Chinese punctuation, quotes, and commas without grouping words into punctuation', () => {
+  const line1 = shared.segmentText('太棒了！');
+  const words1 = line1.filter(t => t.isWord).map(t => t.hanzi);
+  const puncts1 = line1.filter(t => !t.isWord).map(t => t.hanzi);
+  assert.ok(words1.includes('了'), 'Final particle 了 must be marked as word');
+  assert.deepEqual(puncts1, ['！']);
+
+  const line2 = shared.segmentText('“你好”');
+  const words2 = line2.filter(t => t.isWord).map(t => t.hanzi);
+  const puncts2 = line2.filter(t => !t.isWord).map(t => t.hanzi);
+  assert.deepEqual(words2, ['你好']);
+  assert.deepEqual(puncts2, ['“', '”']);
+
+  const line3 = shared.segmentText('北京、上海。');
+  const words3 = line3.filter(t => t.isWord).map(t => t.hanzi);
+  const puncts3 = line3.filter(t => !t.isWord).map(t => t.hanzi);
+  assert.deepEqual(words3, ['北京', '上海']);
+  assert.deepEqual(puncts3, ['、', '。']);
+});
+

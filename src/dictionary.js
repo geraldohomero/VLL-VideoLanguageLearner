@@ -82,16 +82,15 @@ function vllLookupWord(word) {
 function vllSegmentText(text) {
   if (!text || text.trim().length === 0) return [];
 
+  if (typeof VLL_SubtitlesShared !== 'undefined' && typeof VLL_SubtitlesShared.segmentText === 'function') {
+    return VLL_SubtitlesShared.segmentText(text).map(t => t.hanzi);
+  }
+
   try {
     const segmenter = new Intl.Segmenter(['zh-TW', 'zh-HK', 'zh-Hant', 'zh-Hans', 'zh-CN', 'zh'], { granularity: 'word' });
     const segments = [];
     for (const seg of segmenter.segment(text)) {
-      if (seg.isWordLike) {
-        segments.push(seg.segment);
-      } else {
-        // Keep punctuation and spaces as-is for rendering
-        segments.push(seg.segment);
-      }
+      segments.push(seg.segment);
     }
     return segments;
   } catch (err) {
@@ -107,6 +106,35 @@ function vllSegmentText(text) {
  * @returns {Array<{ hanzi: string, pinyin: string, meaning: string, isWord: boolean }>}
  */
 function vllProcessLine(text) {
+  if (typeof VLL_SubtitlesShared !== 'undefined' && typeof VLL_SubtitlesShared.segmentText === 'function') {
+    const tokens = VLL_SubtitlesShared.segmentText(text);
+    return tokens.map(token => {
+      if (!token.isWord) {
+        return {
+          hanzi: token.hanzi,
+          pinyin: '',
+          meaning: '',
+          isWord: false
+        };
+      }
+      const entry = vllLookupWord(token.hanzi);
+      if (entry) {
+        return {
+          hanzi: token.hanzi,
+          pinyin: entry.p,
+          meaning: entry.m,
+          isWord: true
+        };
+      }
+      return {
+        hanzi: token.hanzi,
+        pinyin: '',
+        meaning: '',
+        isWord: true
+      };
+    });
+  }
+
   const segments = vllSegmentText(text);
   return segments.map(seg => {
     const entry = vllLookupWord(seg);

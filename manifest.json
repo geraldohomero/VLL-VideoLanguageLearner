@@ -1,8 +1,14 @@
 {
   "manifest_version": 3,
   "name": "VLL — Video Language Learner",
-  "version": "1.4.3",
+  "version": "1.5.0",
   "description": "Aprenda chinês no YouTube com legendas interativas (Hanzi, Pinyin e tradução), vocabulário colorido e exportação para o Anki.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "vll@geraldohomero.github.io",
+      "strict_min_version": "115.0"
+    }
+  },
   "permissions": [
     "activeTab",
     "storage",
@@ -24,7 +30,17 @@
     ]
   },
   "background": {
-    "service_worker": "src/background.js"
+    "service_worker": "src/background.js",
+    "scripts": [
+      "src/logger.shared.js",
+      "src/messages.shared.js",
+      "src/config.shared.js",
+      "src/network.shared.js",
+      "src/database.js",
+      "src/dictionary.js",
+      "src/export.js",
+      "src/background.js"
+    ]
   },
   "content_scripts": [
     {
@@ -51,6 +67,15 @@
   ],
   "side_panel": {
     "default_path": "src/sidepanel.html"
+  },
+  "sidebar_action": {
+    "default_panel": "src/sidepanel.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    },
+    "default_title": "VLL — Side Panel"
   },
   "action": {
     "default_popup": "src/popup.html",

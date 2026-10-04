@@ -177,6 +177,10 @@
 
   async function closeSidepanel() {
     try {
+      if (typeof browser !== 'undefined' && browser.sidebarAction?.close) {
+        await browser.sidebarAction.close();
+        return;
+      }
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (Number.isInteger(tab?.id)) {
         await chrome.runtime.sendMessage({ type: MSG.CLOSE_SIDEPANEL, tabId: tab.id });
